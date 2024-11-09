@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+  <title>Balanço de Estoque</title>
+  <link rel="icon" href="bsb/favicon.ico" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&subset=latin,cyrillic-ext" rel="stylesheet" type="text/css">
+  <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
+  <link href="bsb/plugins/node-waves/waves.css" rel="stylesheet">
+  <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet">
+  <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
+  <link href="bsb/css/style.css" rel="stylesheet">
+  <link href="bsb/css/themes/all-themes.css" rel="stylesheet">
+  <style>
+    /* Estilo padrão para os inputs */
+    input.form-control {
+      border: 1px solid #585858; /* Adiciona uma borda leve */
+      padding: 10px;
+      transition: border-color 0.3s, box-shadow 0.3s; /* Suaviza a transição da borda e do brilho */
+    }
+
+    /* Efeito quando o input está em foco */
+    input.form-control:focus {
+      border-color: #3f51b5; /* Altera a cor da borda ao focar no input */
+      box-shadow: 0 0 8px rgba(63, 81, 181, 0.6); /* Adiciona um brilho leve */
+      outline: none; /* Remove o outline padrão do navegador */
+    }
+
+    .modal-body {
+      max-height: 500px; /* Define a altura máxima do conteúdo do modal */
+      overflow-y: auto; /* Adiciona a barra de rolagem vertical */
+    }
+
+    @media (max-width: 768px) {
+      .container-fluid {
+        display: flex;
+        flex-direction: column;
+      }
+      .col-lg-3, .col-md-3 {
+        order: 1;
+        width: 100%;
+      }
+      .col-lg-9, .col-md-9 {
+        order: 2;
+        width: 100%;
+      }
+    }
+
+    .card {
+      margin-top: 20px;
+    }
+    .header {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body class="theme-blue">
+
+  <!-- Spinner de carregamento -->
+<div id="pageLoader" class="page-loader-wrapper" style="display: none;">
+  <div class="loader">
+      <div class="preloader">
+          <div class="spinner-layer pl-blue">
+              <div class="circle-clipper left">
+                  <div class="circle"></div>
+              </div>
+              <div class="circle-clipper right">
+                  <div class="circle"></div>
+              </div>
+          </div>
+      </div>
+      <p>Carregando...</p>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row clearfix">
+    <div class="col-lg-3 col-md-3 col-sm-12">
+      <div class="card">
+        <div class="header">
+          <h2>Modelo de Balanço</h2>
+        </div>
+        <div class="body">
+          <div class="form-group">
+            <label for="modelName">Nome do Modelo:</label>
+            <input style="border: 1px solid #ccc;" type="text" id="modelName" class="form-control" autocomplete="off" oninput="generateTag()">
+          </div>
+          <div class="form-group">
+            <label for="modelTag">Tag:</label>
+            <input style="border: 1px solid #ccc;" type="text" id="modelTag" class="form-control" autocomplete="off" readonly>
+            <span id="tagValidationMessage" style="color: red; display: none;">Tag já existe. Escolha outro nome.</span>
+          </div>
+          <!-- Campo para URL -->
+          <div class="form-group">
+            <label for="modelUrl">URL:</label>
+            <div class="input-group">
+              <input type="text" id="modelUrl" class="form-control" readonly>
+              <div class="input-group-append">
+                <button id="btnCopyUrl" class="btn btn-secondary" type="button">Copiar</button>
+                <button id="btnShareWhatsapp" class="btn btn-success" type="button">Compartilhar</button>
+                <button id="btnListModelo" class="btn btn-primary waves-effect">Lista de Modelos</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-9 col-md-9 col-sm-12">
+      <div class="card">
+        <div class="header">
+          <h2>Balanço</h2>
+        </div>
+        <div class="body">
+          <button id="btnAddCategory" class="btn btn-primary" style="margin-bottom: 15px;">Adicionar Categorias</button>
+          <div class="table-responsive">
+            <table id="balancoTable" class="table table-bordered table-striped">
+              <thead>
+              <tr>
+                <th>Código</th>
+                <th>Categoria</th>
+                <th>Unidade</th>
+                <th>Ação</th>
+              </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="footer text-right">
+        <button id="limparBalanco" class="btn btn-warning">Limpar</button>
+        <button id="finalizarLancamento" class="btn btn-success" disabled>Finalizar Lançamento</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalCategoriaProduto" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Adicionar Categoria/Produto</h4>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-5">
+            <h5>Todas</h5>
+            <input type="text" id="searchCategoriesLeft" class="form-control" placeholder="Buscar...">
+            <ul id="categoriesList" class="list-group">
+            </ul>
+          </div>
+
+          <div class="col-md-7">
+            <h5>Selecionadas</h5>
+            <ul id="selectedCategoriesList" class="list-group">
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link waves-effect" data-dismiss="modal">Fechar</button>
+        <button id="btnConfirmarAdicionar" type="button" class="btn btn-primary">Adicionar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="bsb/plugins/jquery/jquery.min.js"></script>
+<script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+<script src="bsb/plugins/node-waves/waves.js"></script>
+<script src="bsb/plugins/jquery-datatable/jquery.dataTables.js"></script>
+<script src="bsb/plugins/jquery-datatable/skin/bootstrap/js/dataTables.bootstrap.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="bsb/plugins/bootstrap-notify/bootstrap-notify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+  $(document).ready(function () {
+    const baseUrl = window.location.hostname !== 'localhost' ?
+        'https://portal.vemprodeck.com.br/api/v1/index.php' :
+        'http://localhost/portal-deck/api/v1/index.php';
+
+
+    const baseUrlRedirect = window.location.hostname !== 'localhost' ?
+            'https://portal.vemprodeck.com.br' :
+            'http://localhost/portal-deck';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const unitId = urlParams.get('unit_id');
+    const username = urlParams.get('username');
+
+    let categories = []; // Array para armazenar as categorias disponíveis
+    let selectedCategories = {}; // Objeto para armazenar as categorias e seus produtos selecionados
+    let productsInBalance = []; // Array para armazenar produtos adicionados ao balanço
+
+    // Função para carregar as categorias e produtos
+    async function loadCategories() {
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'listProductsByCategory',
+                token: token,
+                data: { unit_id: unitId }
+            });
+
+            if (response.data && response.data.success) {
+                categories = response.data.products_by_category;
+                renderCategoriesList();
+            }
+        } catch (error) {
+            console.error('Erro ao carregar categorias:', error);
+        }
+    }
+
+    // Função para renderizar a lista de categorias disponíveis (esquerda)
+    function renderCategoriesList() {
+        const categoriesList = $('#categoriesList');
+        categoriesList.empty();
+        categories.forEach(category => {
+            categoriesList.append(`
+                <li class="list-group-item category-item" data-category='${JSON.stringify(category)}'>
+                    <span>${category.categoria}</span>
+                </li>
+            `);
+        });
+    }
+
+    // Função para renderizar a lista de categorias selecionadas (direita)
+    function renderSelectedCategories() {
+        const selectedCategoriesList = $('#selectedCategoriesList');
+        selectedCategoriesList.empty();
+
+        Object.keys(selectedCategories).forEach(categoryName => {
+            const category = selectedCategories[categoryName];
+            selectedCategoriesList.append(`
+                <li class="list-group-item selected-category-item" data-category="${categoryName}">
+                    <strong>${categoryName}</strong>
+                    <div class="sub-items">
+                        <ul>
+                            ${category.itens.map(item => `
+                                <li>
+                                    <input type="checkbox" class="select-item" data-category="${categoryName}" data-codigo="${item.codigo}" ${item.selected ? 'checked' : ''}>
+                                    ${item.nome} (${item.und})
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </li>
+            `);
+        });
+    }
+
+    // Evento para adicionar/remover categoria à lista selecionada ao clicar
+    $(document).on('click', '.category-item', function () {
+        const category = JSON.parse($(this).attr('data-category'));
+
+        if (selectedCategories[category.categoria]) {
+            delete selectedCategories[category.categoria];
+        } else {
+            selectedCategories[category.categoria] = {
+                itens: category.itens.map(item => ({
+                    ...item,
+                    selected: true // Define os itens como selecionados ao adicionar a categoria inteira
+                }))
+            };
+        }
+        renderSelectedCategories();
+    });
+
+    // Evento para remover categoria da lista selecionada ao clicar
+    $(document).on('click', '.selected-category-item', function () {
+        const categoryName = $(this).attr('data-category');
+        delete selectedCategories[categoryName];
+        renderSelectedCategories();
+    });
+
+    // Evento para selecionar/desmarcar um item específico
+    $(document).on('change', '.select-item', function () {
+        const categoryName = $(this).attr('data-category');
+        const codigo = $(this).attr('data-codigo');
+        const isChecked = $(this).is(':checked');
+        const item = selectedCategories[categoryName].itens.find(i => i.codigo == codigo);
+        if (item) {
+            item.selected = isChecked;
+        }
+    });
+
+    // Abrir modal e carregar categorias
+    $('#btnAddCategory').click(function () {
+        loadCategories();
+        $('#modalCategoriaProduto').modal('show');
+    });
+
+    // Confirmar adição de categorias e produtos
+    $('#btnConfirmarAdicionar').click(function () {
+        const itemsToAdd = [];
+        Object.keys(selectedCategories).forEach(categoryName => {
+            selectedCategories[categoryName].itens
+                .filter(item => item.selected)
+                .forEach(item => itemsToAdd.push(item));
+        });
+
+        // Adiciona os itens selecionados ao array e tabela do balanço
+        itemsToAdd.forEach(item => {
+            if (!productsInBalance.some(p => p.codigo === item.codigo)) {
+                productsInBalance.push(item);
+
+                $('#balancoTable tbody').append(`
+                    <tr>
+                        <td>${item.codigo}</td>
+                        <td>${item.nome}</td>
+                        <td>${item.und}</td>
+                        <td><button class="btn btn-danger remove-product" data-codigo="${item.codigo}">Remover</button></td>
+                    </tr>
+                `);
+            }
+        });
+
+        $('#modalCategoriaProduto').modal('hide');
+    });
+
+    // Função para remover produtos do balanço
+    $(document).on('click', '.remove-product', function () {
+        const codigo = $(this).data('codigo');
+
+        // Remove o produto do array
+        productsInBalance = productsInBalance.filter(product => product.codigo !== codigo);
+
+        // Remove a linha da tabela
+        $(this).closest('tr').remove();
+    });
+
+    // Função para validar a tag
+    async function validateTag(tag) {
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'validateTagExists',
+                token: token,
+                data: { tag: tag }
+            });
+
+            return response.data.success;
+        } catch (error) {
+            console.error('Erro ao validar a tag:', error);
+            return false;
+        }
+    }
+
+    // Função para gerar a tag a partir do nome do modelo e atualizar a URL
+    window.generateTag = async function () {
+        const modelName = $('#modelName').val().trim();
+        const modelTag = `${unitId}-${modelName.toLowerCase().replace(/\s+/g, '-')}`;
+        const modelUrl = `https://portal.vemprodeck.com.br/balanco/${modelTag}`;
+
+        $('#modelTag').val(modelTag);
+        $('#modelUrl').val(modelUrl);
+
+        const isValid = await validateTag(modelTag);
+        if (!isValid) {
+            $('#tagValidationMessage').show();
+            $('#finalizarLancamento').prop('disabled', true);
+        } else {
+            $('#tagValidationMessage').hide();
+            $('#finalizarLancamento').prop('disabled', false);
+        }
+    };
+
+    // Copiar URL para a área de transferência
+    $('#btnCopyUrl').click(function () {
+        const url = $('#modelUrl').val();
+        navigator.clipboard.writeText(url).then(() => {
+            alert('URL copiada para a área de transferência');
+        }).catch(err => {
+            console.error('Erro ao copiar URL:', err);
+        });
+    });
+
+    // Compartilhar URL via WhatsApp
+    $('#btnShareWhatsapp').click(function () {
+        const url = $('#modelUrl').val();
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent('Confira o modelo de balanço: ' + url)}`;
+        window.open(whatsappUrl, '_blank');
+    });
+
+    // Função para finalizar o lançamento
+    $('#finalizarLancamento').click(async function () {
+        const modelName = $('#modelName').val();
+        const modelTag = $('#modelTag').val();
+
+        if (modelName && modelTag && productsInBalance.length > 0) {
+            // Exibir spinner de carregamento
+            $('#pageLoader').show();
+
+            try {
+                const response = await axios.post(baseUrl, {
+                    method: 'createModelo',
+                    token: token,
+                    data: {
+                        system_unit_id: unitId,
+                        nome: modelName,
+                        tag: modelTag,
+                        usuario_id: username,
+                        itens: productsInBalance
+                    }
+                });
+
+                if (response.data.success) {
+                    // Limpar tabela e campos
+                    $('#balancoTable tbody').empty();
+                    $('#modelName').val('');
+                    $('#modelTag').val('');
+                    $('#modelUrl').val('');
+                    productsInBalance = [];
+                    selectedCategories = {};
+                    renderSelectedCategories(); // Limpa a lista de categorias selecionadas
+                    $('#finalizarLancamento').prop('disabled', true);
+
+                    // Mostrar modal de sucesso do AdminBSB
+                    showDialog('Lançamento finalizado com sucesso!', 'success');
+                } else {
+                    showDialog('Erro ao finalizar o lançamento: ' + response.data.message, 'danger');
+                }
+            } catch (error) {
+                console.error('Erro ao finalizar lançamento:', error);
+                showDialog('Erro ao finalizar lançamento. Tente novamente.', 'danger');
+            } finally {
+                // Ocultar spinner de carregamento
+                $('#pageLoader').hide();
+                window.location.href = `${baseUrlRedirect}/external/listModelBalanco.html?username=${username}&token=${token}&unit_id=${unitId}`;
+            }
+        } else {
+            showDialog('Por favor, preencha todos os campos e adicione produtos ao balanço antes de finalizar.', 'warning');
+        }
+    });
+
+    // Função para mostrar o diálogo de mensagem usando AdminBSB
+    // Função para mostrar o diálogo de mensagem usando SweetAlert
+    function showDialog(message, type) {
+        Swal.fire({
+            title: type === 'success' ? "Sucesso" : "Erro",
+            text: message,
+            icon: type,
+            confirmButtonText: "OK",
+        });
+    }
+
+    // Evento para o botão "Novo Modelo"
+    $('#btnListModelo').click(function () {
+                window.location.href = `${baseUrlRedirect}/external/listModelBalanco.html?username=${username}&token=${token}&unit_id=${unitId}`;
+            });
+
+
+    // Função para limpar todos os campos e variáveis ao clicar em "Limpar"
+    $('#limparBalanco').click(function () {
+        $('#balancoTable tbody').empty();
+        $('#modelName').val('');
+        $('#modelTag').val('');
+        $('#modelUrl').val('');
+        productsInBalance = [];
+        selectedCategories = {};
+        renderSelectedCategories();
+        $('#finalizarLancamento').prop('disabled', true);
+        console.log('Balanço limpo!');
+    });
+
+    loadCategories();
+});
+
+</script>
+
+</body>
+</html>

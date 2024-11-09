@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferência Assistida</title>
+
+    <!-- Favicon-->
+    <link rel="icon" href="bsb/favicon.ico" type="image/x-icon">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&subset=latin,cyrillic-ext" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" type="text/css">
+
+    <!-- Bootstrap Core Css -->
+    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
+
+    <!-- Waves Effect Css -->
+    <link href="bsb/plugins/node-waves/waves.css" rel="stylesheet" />
+
+    <!-- Animation Css -->
+    <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet" />
+
+    <!-- JQuery DataTable Css -->
+    <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
+
+    <!-- SweetAlert Css -->
+    <link href="bsb/plugins/sweetalert/sweetalert.css" rel="stylesheet" />
+
+    <!-- Custom Css -->
+    <link href="bsb/css/style.css" rel="stylesheet">
+    <link href="bsb/css/themes/all-themes.css" rel="stylesheet" />
+
+    <!-- JQuery Steps CSS (para o Wizard) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.css">
+
+    <!-- MultiSelect CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/multi-select/0.9.12/css/multi-select.css">
+
+    <!-- Custom CSS for table and modal -->
+    <style>
+        .wizard > .content {
+            min-height: 300px;
+        }
+        /* Custom table alignment */
+        #result-section {
+            margin-top: 20px;
+        }
+
+                /* Altera a cor dos steps para azul */
+        .wizard .steps .current a {
+            background-color: #007bff !important; /* Cor azul */
+            border-color: #007bff !important; /* Cor azul */
+            color: white !important; /* Texto branco */
+        }
+
+        .wizard .steps .done a {
+            background-color: #007bff !important; /* Cor azul para steps concluídos */
+            border-color: #007bff !important;
+            color: white !important;
+        }
+
+        .wizard .actions a {
+            background-color: #007bff !important; /* Azul */
+            border-color: #007bff !important; /* Azul */
+            color: white !important; /* Texto branco */
+        }
+
+        .wizard .actions a:hover {
+            background-color: #0056b3 !important; /* Azul mais escuro no hover */
+            border-color: #0056b3 !important; /* Azul mais escuro no hover */
+        }
+    </style>
+</head>
+<body class="theme-blue">
+
+    <!-- Modal Estilo AdminBSB -->
+    <div class="modal fade" id="defaultModal" tabindex="-1" role="dialog" style="display: none;">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="defaultModalLabel">Calculando Média de Consumo...</h4>
+                </div>
+                <div class="modal-body">
+                    Aguarde enquanto as necessidades para o período selecionado estão sendo calculadas.
+                </div>
+                <div class="modal-footer">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row clearfix">
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                <div class="card">
+                    <div class="header">
+                        <h2>Transferência Assistida</h2>
+                    </div>
+                    <div class="body">
+                        <!-- Form Wizard -->
+                        <form id="wizard-form">
+                            <div id="wizard">
+                                <h2>Destino</h2>
+                                <section>
+                                    <h4>Selecione o Destino</h4>
+                                    <label for="unit-select">Unidade de Destino:</label>
+                                    <select id="unit-select" name="unit-select" class="form-control" required>
+                                        <!-- Unidades serão preenchidas dinamicamente -->
+                                    </select>
+                                </section>
+
+                                <h2>Período</h2>
+                                <section>
+                                    <h4>Selecione o Período</h4>
+                                    <h4>Esse é o periodo para o qual você deseja enviar os mantimentos</h4>
+                                    <div class="form-group">
+                                        <input type="checkbox" id="use-period" checked>
+                                        <label for="use-period">Usar Período</label>
+                                    </div>
+                                    <div id="period-selection" class="row">
+                                        <div class="col-sm-6">
+                                            <label for="start-day">Dia Inicial</label>
+                                            <select id="start-day" name="start-day" class="form-control" required>
+                                                <option value="0">Domingo</option>
+                                                <option value="1">Segunda-feira</option>
+                                                <option value="2">Terça-feira</option>
+                                                <option value="3">Quarta-feira</option>
+                                                <option value="4">Quinta-feira</option>
+                                                <option value="5">Sexta-feira</option>
+                                                <option value="6">Sábado</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label for="end-day">Dia Final</label>
+                                            <select id="end-day" name="end-day" class="form-control" required>
+                                                <option value="0">Domingo</option>
+                                                <option value="1">Segunda-feira</option>
+                                                <option value="2">Terça-feira</option>
+                                                <option value="3">Quarta-feira</option>
+                                                <option value="4">Quinta-feira</option>
+                                                <option value="5">Sexta-feira</option>
+                                                <option value="6">Sábado</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </section>
+                                
+
+                                <h2>Produtos</h2>
+                                <section>
+                                    <h4>Selecione os Produtos</h4>
+                                
+                                    <!-- Opções para Importar ou Selecionar Manualmente -->
+                                    <div class="form-group">
+                                        <label>Como deseja selecionar os produtos?</label>
+                                        <div>
+                                            <input type="radio" id="option-importar" name="product-option" value="importar">
+                                            <label for="option-importar">Importar Produtos do Balanço</label>
+                                            
+                                            <input type="radio" id="option-manual" name="product-option" value="manual" checked>
+                                            <label for="option-manual">Selecionar Manualmente</label>
+                                        </div>
+                                    </div>
+                                
+                                    <!-- Importar Produtos do Balanço -->
+                                    <div id="importar-balance" style="display: none;">
+                                        <label for="modelos-select">Selecione o Balanço:</label>
+                                        <select id="modelos-select" name="modelos-select" class="form-control">
+                                            <!-- Modelos serão preenchidos dinamicamente -->
+                                        </select>
+                                    </div>
+                                
+                                    <!-- Seleção Manual de Produtos -->
+                                    <div id="manual-select">
+                                        <label for="product-select">Selecione os Produtos:</label>
+                                        <select multiple id="product-select" name="product-select" class="multi-select" required>
+                                            <!-- Produtos serão preenchidos dinamicamente -->
+                                        </select>
+                                    </div>
+                                </section>                                
+
+                                <h2>Necessidades Calculadas</h2>
+                                <section>
+                                    <div id="result-section" style="display:none;">
+                                        <h4>Necessidades Calculadas</h4>
+                                        <table id="result-table" class="table table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Codigo</th>
+                                                    <th>Produto</th>
+                                                    <th>Vendas (+)</th>
+                                                    <th>Margem (+)</th>
+                                                    <th>Saldo (-)</th>
+                                                    <th>Recomendado (=)</th>
+                                                    <th>Aplicar</th>
+                                                    <th>Quantidade</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Resultados serão preenchidos dinamicamente -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            </div>
+                        </form>
+
+                        <div id="result"></div> <!-- Área para mostrar os últimos 4 dias -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jquery Core Js (Versão 2.2.4 para Compatibilidade com Bootstrap) -->
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <!-- Bootstrap Core Js -->
+    <script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+    <!-- Waves Effect Plugin Js -->
+    <script src="bsb/plugins/node-waves/waves.js"></script>
+    <!-- SweetAlert Plugin Js -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- jQuery Steps JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.min.js"></script>
+    <!-- jQuery Validation JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js"></script>
+    <!-- jQuery Multi-Select -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/multi-select/0.9.12/js/jquery.multi-select.min.js"></script>
+
+    <!-- Custom JS -->
+     <script>
+
+      function applyRecomendado(codigo, recomendado) {
+        const quantidadeInput = document.getElementById(`quantidade-${codigo}`);
+        if (quantidadeInput) {
+            quantidadeInput.value = recomendado;
+        }
+    }
+document.addEventListener('DOMContentLoaded', function () {
+
+    function applyRecomendado(codigo, recomendado) {
+        const quantidadeInput = document.getElementById(`quantidade-${codigo}`);
+        if (quantidadeInput) {
+            quantidadeInput.value = recomendado;
+        }
+    }
+
+
+    const baseUrl = window.location.hostname !== 'localhost' ?
+        'https://portal.vemprodeck.com.br/api/v1/index.php' :
+        'http://localhost/portal-deck/api/v1/index.php';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const unitId = urlParams.get('unit_matriz_id');
+
+    let importedProducts = []; // Armazenar os produtos importados como objetos {codigo_produto, nome_produto}
+
+    // Inicializar o Form Wizard
+    const form = $("#wizard-form");
+
+    form.validate({
+        errorPlacement: function (error, element) {
+            element.before(error); // Posiciona o erro antes do elemento
+        },
+        rules: {
+            "unit-select": "required",
+            "start-date": "required",
+            "end-date": "required",
+            "product-select": {
+                required: function () {
+                    return $("#product-select option:selected").length > 0 || importedProducts.length > 0;
+                }
+            }
+        }
+    });
+
+    $("#wizard").steps({
+        headerTag: "h2",
+        bodyTag: "section",
+        transitionEffect: "slideLeft",
+        labels: {
+            finish: "Finalizar",
+            next: "Próximo",
+            previous: "Anterior"
+        },
+        onStepChanging: function (event, currentIndex, newIndex) {
+            form.validate().settings.ignore = ":disabled,:hidden";
+
+            if (newIndex < currentIndex) {
+                window.location.reload();  // Força o reload da página
+                return false;
+            }
+
+            return form.valid(); 
+        },
+        onStepChanged: function (event, currentIndex, priorIndex) {
+            if (currentIndex === 3) {
+                calcularNecessidades();
+            } else if (currentIndex === 2) {
+                const selectedUnitId = document.getElementById('unit-select').value;
+                if (selectedUnitId) {
+                    loadProdutos(selectedUnitId);
+                    loadModelos(selectedUnitId);  // Carregar modelos de balanço
+                } else {
+                    Swal.fire({
+                        title: 'Atenção!',
+                        text: "Por favor, selecione uma unidade de destino.",
+                        icon: 'warning',
+                        confirmButtonText: 'Ok'
+                    });
+                }
+            }
+        },
+        onFinished: function (event, currentIndex) {
+            // Chama a função de criar transferência ao finalizar o wizard
+            createTransfer();
+        }
+    });
+
+    // Exibir Modal de Carregamento
+    function showLoadingModal() {
+        $('#defaultModal').modal('show');
+    }
+
+    function hideLoadingModal() {
+        $('#defaultModal').modal('hide');
+    }
+
+    async function loadUnidades() {
+        const response = await fetch(baseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                method: 'getFiliaisByMatriz',
+                token: token,
+                data: { unit_matriz_id: unitId }
+            })
+        });
+
+        const unidades = await response.json();
+        const select = document.getElementById('unit-select');
+        unidades.forEach(filial => {
+            const option = new Option(filial.filial_nome, filial.filial_id);
+            select.appendChild(option);
+        });
+    }
+
+    // Carregar Insumos/Produtos
+    async function loadProdutos(unitId) {
+        const response = await fetch(baseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                method: 'getInsumosUsage',
+                token: token,
+                data: { system_unit_id: unitId }
+            })
+        });
+
+        const produtos = await response.json();
+        const select = document.getElementById('product-select');
+        select.innerHTML = ''; // Limpa produtos antigos
+        produtos.forEach(produto => {
+            const option = new Option(produto.insumo_nome, produto.insumo_id);
+            select.appendChild(option);
+        });
+        $('#product-select').multiSelect();
+    }
+
+    // Carregar Modelos para "Importar Produtos do Balanço"
+    async function loadModelos(unitId) {
+    const response = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            method: 'listModelosWithProducts',
+            token: token,
+            data: { unit_id: unitId }
+        })
+    });
+
+    const data = await response.json();
+    const select = document.getElementById('modelos-select');
+    select.innerHTML = ''; // Limpa opções antigas
+
+    // Adiciona a opção padrão
+    const defaultOption = new Option('Selecione um modelo', '');
+    select.appendChild(defaultOption);
+
+    data.modelos.forEach(modelo => {
+        const option = new Option(modelo.nome, modelo.tag); // Usar `tag` como valor
+        select.appendChild(option);
+    });
+
+    select.addEventListener('change', function () {
+        const tagSelecionada = this.value;
+        loadProdutosDoModelo(tagSelecionada); // Carrega os produtos do modelo ao selecionar a tag
+    });
+}
+
+
+    // Carregar Produtos do Modelo ao selecionar uma tag
+    async function loadProdutosDoModelo(tag) {
+        const response = await fetch(baseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                method: 'getModelByTag',
+                data: { tag: tag }
+            })
+        });
+
+        const data = await response.json();
+        const produtosModelo = data.itens;
+        const selectProdutos = document.getElementById('product-select');
+        selectProdutos.innerHTML = ''; // Limpa produtos anteriores
+
+        importedProducts = []; // Limpa a variável de produtos importados
+
+        for (const categoria in produtosModelo) {
+            produtosModelo[categoria].forEach(item => {
+                const option = new Option(item.nome_produto, item.codigo_produto); // Usar código do produto
+                selectProdutos.appendChild(option);
+
+                // Adicionar os produtos importados como objetos
+                importedProducts.push({
+                    codigo_produto: item.codigo_produto,
+                    nome_produto: item.nome_produto
+                });
+            });
+        }
+
+        $('#product-select').multiSelect('refresh');
+    }
+
+    // Alternar entre "Importar Produtos" e "Selecionar Manualmente"
+    document.querySelectorAll('input[name="product-option"]').forEach(option => {
+        option.addEventListener('change', function () {
+            const importar = document.getElementById('importar-balance');
+            const manual = document.getElementById('manual-select');
+            if (this.value === 'importar') {
+                importar.style.display = 'block';
+                manual.style.display = 'none';
+            } else {
+                importar.style.display = 'none';
+                manual.style.display = 'block';
+            }
+        });
+    });
+
+    // Calcular necessidades após o envio de datas e produtos
+    async function calcularNecessidades() {
+    const selectedUnitId = document.getElementById('unit-select').value;
+    const selectedProductsManual = $('#product-select').val() || []; // Produtos selecionados manualmente
+
+    // Concatenar os produtos selecionados manualmente com os produtos importados
+    const allSelectedProducts = [...new Set([...selectedProductsManual, ...importedProducts.map(p => p.codigo_produto)])];
+
+    
+
+    const dates = calcularUltimas4DatasPorSemana();
+    console.log("Últimas 4 datas calculadas:", dates);
+
+    showLoadingModal(); // Exibir o modal enquanto os dados estão sendo carregados
+
+    const response = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            method: 'getInsumoConsumption',
+            token: token,
+            data: {
+                system_unit_id: selectedUnitId,
+                dates: dates,
+                productCodes: allSelectedProducts  // Enviando todos os produtos selecionados
+            }
+        })
+    });
+
+    const consumos = await response.json();
+
+    // Verifique se a resposta da API é um array e log da resposta
+    console.log("Resposta da API:", consumos);
+    
+    if (!Array.isArray(consumos)) {
+        console.error('Esperado um array, mas recebeu:', consumos);
+        Swal.fire({
+            title: 'Erro!',
+            text: 'Não foi possível calcular as necessidades. A resposta da API não é válida.',
+            icon: 'error',
+            confirmButtonText: 'Ok'
+        });
+        hideLoadingModal(); // Ocultar o modal
+        return; // Interrompe a função se a resposta não for válida
+    }
+
+    // Exibir os dados no grid
+    const grid = document.getElementById('result-table').querySelector('tbody');
+    grid.innerHTML = ''; // Limpa o grid
+
+    consumos.forEach(consumo => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${consumo.codigo}</td>
+        <td>${consumo.nome || 'Produto não encontrado'}</td>
+        <td>${consumo.sales}</td>
+        <td>${consumo.margem}</td>
+        <td>${consumo.saldo}</td>
+        <td>${consumo.recomendado}</td>
+        <td>
+            <button type="button" class="btn btn-primary waves-effect apply-button" onclick="applyRecomendado('${consumo.codigo}', ${consumo.recomendado})">Aplicar</button>
+        </td>
+        <td><input type="number" id="quantidade-${consumo.codigo}" min="0" value="0"></td>
+    `;
+    grid.appendChild(row);
+});
+    hideLoadingModal(); // Ocultar o modal
+    document.getElementById('result-section').style.display = 'block'; // Exibe a seção de resultados
+}
+
+    // Criar a transferência
+    async function createTransfer() {
+    const sourceUnitId = unitId;
+    const destinoUnitId = document.getElementById('unit-select').value;
+    const transferItems = [];
+    const rows = document.querySelectorAll('#result-table tbody tr');
+
+    rows.forEach(row => {
+        const codigo = row.cells[0].innerText;
+        const quantidadeInput = row.querySelector(`#quantidade-${codigo}`);
+        const quantidade = quantidadeInput ? parseInt(quantidadeInput.value) : 0;
+        if (quantidade > 0) {
+            transferItems.push({
+                codigo: codigo,
+                seq: transferItems.length + 1,
+                quantidade: quantidade
+            });
+        }
+    });
+
+    if (transferItems.length === 0) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: "Nenhum produto foi selecionado para a transferência.",
+            icon: 'warning',
+            confirmButtonText: 'Ok'
+        });
+        return;
+    }
+
+    const transferData = {
+        method: "createTransferItems",
+        token: token,
+        data: {
+            system_unit_id: sourceUnitId,
+            system_unit_id_destino: destinoUnitId,
+            itens: transferItems,
+            usuario_id: 123
+        }
+    };
+
+    const confirmation = await Swal.fire({
+        title: 'Confirmação',
+        text: "Você deseja realizar a transferência?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sim',
+        cancelButtonText: 'Não'
+    });
+
+    if (confirmation.isConfirmed) {
+        showLoadingModal();
+
+        try {
+            const response = await fetch(baseUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(transferData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: `Transferência realizada com sucesso. Documento: ${result.transfer_doc}`,
+                    icon: 'success',
+                    confirmButtonText: 'Ok'
+                }).then((result) => {
+                if (result.isConfirmed) {
+                    // Chama a função para gerar o documento de impressão
+                    generatePrintDocument(result.transfer_doc, transferItems);
+                    location.reload();
+                    }
+                });
+
+                
+            } else {
+                Swal.fire({
+                    title: 'Erro!',
+                    text: `Não foi possível realizar a transferência: ${result.message}`,
+                    icon: 'error',
+                    confirmButtonText: 'Ok'
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao realizar a transferência:', error);
+            Swal.fire({
+                title: 'Erro!',
+                text: 'Ocorreu um erro ao tentar realizar a transferência.',
+                icon: 'error',
+                confirmButtonText: 'Ok'
+            });
+        } finally {
+            hideLoadingModal();
+        }
+    }
+}
+
+function generatePrintDocument(docNumber, items) {
+    const printWindow = window.open('', '_blank');
+    const printContent = `
+        <html>
+        <head>
+            <title>Documento de Transferência</title>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                h1 { text-align: center; }
+                p, table { margin-top: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                table, th, td { border: 1px solid #ddd; padding: 8px; }
+                th { background-color: #f2f2f2; text-align: left; }
+                .signature-section { margin-top: 50px; }
+                .signature-line { border-top: 1px solid #000; width: 200px; margin: 0 auto; text-align: center; }
+                .signature-label { text-align: center; margin-top: 5px; }
+            </style>
+        </head>
+        <body>
+            <h1>Documento de Transferência</h1>
+            <p><strong>Documento:</strong> ${docNumber}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Seq</th>
+                        <th>Código</th>
+                        <th>Quantidade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(item => `
+                        <tr>
+                            <td>${item.seq}</td>
+                            <td>${item.codigo}</td>
+                            <td>${item.quantidade}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="signature-section">
+                <div class="signature-line"></div>
+                <p class="signature-label">Assinatura do Responsável</p>
+            </div>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+
+
+    // Função para calcular as últimas 4 datas por semana
+    function calcularUltimas4DatasPorSemana() {
+    const today = new Date();
+    const startDay = parseInt(document.getElementById('start-day').value);
+    const endDay = parseInt(document.getElementById('end-day').value);
+
+    // Função para calcular as datas mais recentes para um dia da semana específico
+    function getLastDatesForDay(dayOfWeek) {
+        const dates = [];
+        let currentDate = new Date(today);
+
+        // Recuar até o dia da semana desejado e coletar as últimas 4 ocorrências
+        while (dates.length < 4) {
+            if (currentDate.getDay() === dayOfWeek) {
+                dates.push(new Date(currentDate));
+            }
+            currentDate.setDate(currentDate.getDate() - 1);
+        }
+
+        return dates;
+    }
+
+    // Obter as datas para o dia inicial e final selecionados
+    const startDates = getLastDatesForDay(startDay);
+    const endDates = getLastDatesForDay(endDay);
+
+    // Combina as datas e ordena
+    const allDates = [...startDates, ...endDates]
+        .sort((a, b) => a - b)
+        .map(date => date.toISOString().split('T')[0]); // Formato YYYY-MM-DD
+
+    console.log("Datas selecionadas:", allDates);
+    return allDates;
+}
+
+
+    // Inicializa as unidades e produtos ao carregar a página
+    loadUnidades();
+});
+
+       
+
+    </script>
+
+</body>
+</html>
