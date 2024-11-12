@@ -8,14 +8,15 @@ ini_set('max_input_time', '600');
 ini_set('memory_limit', '512M');
 
 require_once __DIR__ . '/../database/db.php';// Ajustando o caminho para o arquivo db.php
+require_once __DIR__ . '/../database/db-permission.php';// Ajustando o caminho para o arquivo db.php
 
 
 class BiController {
 
     public static function getUnitsByGroup($group_id) {
-        global $pdo;
+        global $pdop;
 
-        $stmt = $pdo->prepare("SELECT rel.system_unit_id, su.custom_code FROM grupo_estabelecimento_rel AS rel JOIN  system_unit AS su ON rel.system_unit_id = su.id WHERE rel.grupo_id = :group_id;");
+        $stmt = $pdop->prepare("SELECT rel.system_unit_id, su.custom_code FROM grupo_estabelecimento_rel AS rel JOIN  system_unit AS su ON rel.system_unit_id = su.id WHERE rel.grupo_id = :group_id;");
         $stmt->bindParam(':group_id', $group_id, PDO::PARAM_INT);
         $stmt->execute();
 
@@ -123,10 +124,11 @@ class BiController {
 }
 
     public static function consolidateSalesByGroup($group_id, $dt_inicio, $dt_fim) {
+        global $pdop;
         global $pdo;
 
         // Primeiro, obtém todos os system_unit_id do grupo
-        $stmt = $pdo->prepare("
+        $stmt = $pdop->prepare("
         SELECT system_unit_id FROM grupo_estabelecimento_rel WHERE grupo_id = :group_id
     ");
         $stmt->bindParam(':group_id', $group_id, PDO::PARAM_INT);
