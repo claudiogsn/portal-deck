@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../database/db.php'; // Ajustando o caminho para o arquivo db.php
+require_once __DIR__ . '/../database/db-permission.php'; // Ajustando o caminho para o arquivo db.php
 
 class MovimentacaoController {
 
@@ -242,45 +243,53 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
 
 
 
-public static function getBalanceByDoc($system_unit_id, $doc) {
-    global $pdo;
+    public static function getBalanceByDoc($system_unit_id, $doc) {
+        global $pdo;   // Banco de dados principal
+        global $pdop;  // Segundo banco de dados (contendo system_users)
 
-    // Validação de parâmetros obrigatórios
-    if (!$system_unit_id || !$doc) {
-        return ['success' => false, 'message' => 'Parâmetros obrigatórios ausentes.'];
-    }
+        // Validação de parâmetros obrigatórios
+        if (!$system_unit_id || !$doc) {
+            return ['success' => false, 'message' => 'Parâmetros obrigatórios ausentes.'];
+        }
 
-    try {
-        // Consulta os detalhes do balanço, incluindo nome do produto, categoria e nome do usuário
-        $stmt = $pdo->prepare("
+        try {
+            // Consulta os detalhes do balanço, incluindo nome do produto e categoria (banco principal)
+            $stmt = $pdo->prepare("
             SELECT 
                 m.doc,
                 p.codigo as produto_codigo,
                 p.nome AS produto_nome,
                 m.quantidade,
                 c.nome AS categoria_nome,
-                u.login AS usuario_nome,
+                m.usuario_id,
                 m.created_at
             FROM movimentacao m
             LEFT JOIN products p ON m.produto = p.codigo AND m.system_unit_id = p.system_unit_id
             LEFT JOIN categorias c ON p.categoria = c.codigo AND m.system_unit_id = c.system_unit_id
-            LEFT JOIN system_users u ON m.usuario_id = u.id
             WHERE m.system_unit_id = :system_unit_id AND m.doc = :doc
         ");
-        $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
-        $stmt->bindParam(':doc', $doc, PDO::PARAM_STR);
-        $stmt->execute();
+            $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
+            $stmt->bindParam(':doc', $doc, PDO::PARAM_STR);
+            $stmt->execute();
 
-        $movimentacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $movimentacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Verifica se encontrou o balanço
-        if ($movimentacoes) {
-            // Agrupa os dados do balanço e dos itens
+            if (!$movimentacoes) {
+                return ['success' => false, 'message' => 'Balanço não encontrado.'];
+            }
+
+            // Consulta o nome do usuário com base no usuario_id (usando $pdop para acessar o segundo banco)
+            $usuario_id = $movimentacoes[0]['usuario_id'];
+            $stmtUser = $pdop->prepare("SELECT login AS usuario_nome FROM system_users WHERE id = :usuario_id");
+            $stmtUser->bindParam(':usuario_id', $usuario_id, PDO::PARAM_INT);
+            $stmtUser->execute();
+            $usuario = $stmtUser->fetch(PDO::FETCH_ASSOC);
+
             $response = [
                 'success' => true,
                 'balance' => [
                     'doc' => $movimentacoes[0]['doc'],
-                    'usuario_nome' => $movimentacoes[0]['usuario_nome'],
+                    'usuario_nome' => $usuario ? $usuario['usuario_nome'] : 'Usuário não encontrado',
                     'created_at' => $movimentacoes[0]['created_at'],
                     'itens' => []
                 ]
@@ -297,17 +306,11 @@ public static function getBalanceByDoc($system_unit_id, $doc) {
             }
 
             return $response;
-        } else {
-            return ['success' => false, 'message' => 'Balanço não encontrado.'];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Erro ao buscar balanço: ' . $e->getMessage()];
         }
-    } catch (Exception $e) {
-        return ['success' => false, 'message' => 'Erro ao buscar balanço: ' . $e->getMessage()];
     }
-}
-
-
-
-
 
 
     // Criação de movimentação de balanço (tipo 'b')
