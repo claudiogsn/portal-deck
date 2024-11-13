@@ -237,21 +237,22 @@ class ModeloBalancoController {
 
     public static function getModelByTag($tag) {
         global $pdo;
+        global $pdop;
 
         try {
             // Extrair system_unit_id e tag do valor recebido
             if (strpos($tag, '-') === false) {
                 self::sendResponse(false, "Formato de tag inválido.", [], 400);
+                return;
             }
 
             list($system_unit_id, $actual_tag) = explode('-', $tag, 2);
 
-            // Buscar o modelo pelo system_unit_id e tag
+            // Buscar o modelo pelo system_unit_id e tag no banco `$pdo`
             $stmt = $pdo->prepare("
-            SELECT mb.*, su.name as system_unit_name
-            FROM modelos_balanco mb
-            LEFT JOIN system_unit su ON mb.system_unit_id = su.id
-            WHERE mb.system_unit_id = :system_unit_id AND mb.tag = :tag
+            SELECT *
+            FROM modelos_balanco
+            WHERE system_unit_id = :system_unit_id AND tag = :tag
         ");
             $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
             $stmt->bindParam(':tag', $tag, PDO::PARAM_STR);
@@ -261,9 +262,22 @@ class ModeloBalancoController {
 
             if (!$modelo) {
                 self::sendResponse(false, 'Modelo de balanço não encontrado.', [], 404);
+                return;
             }
 
-            // Buscar itens associados ao modelo e agrupá-los por categoria
+            // Buscar o nome da unidade do banco `$pdop`
+            $stmtUnit = $pdop->prepare("
+            SELECT name AS system_unit_name
+            FROM system_unit
+            WHERE id = :system_unit_id
+        ");
+            $stmtUnit->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
+            $stmtUnit->execute();
+
+            $systemUnit = $stmtUnit->fetch(PDO::FETCH_ASSOC);
+            $modelo['system_unit_name'] = $systemUnit ? $systemUnit['system_unit_name'] : null;
+
+            // Buscar itens associados ao modelo e agrupá-los por categoria no banco `$pdo`
             $stmtItens = $pdo->prepare("
             SELECT mbi.*, p.nome AS nome_produto, p.und AS und_produto, p.codigo AS codigo_produto, c.nome AS nome_categoria
             FROM modelos_balanco_itens mbi
@@ -303,6 +317,7 @@ class ModeloBalancoController {
             self::sendResponse(false, 'Erro ao buscar modelo por tag: ' . $e->getMessage(), [], 500);
         }
     }
+
 
 
 
