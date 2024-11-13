@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../database/db.php'; // Ajustando o caminho para o arquivo db.php
+require_once __DIR__ . '/../database/db-permission.php.php'; // Ajustando o caminho para o arquivo db.php
 
 class ModeloBalancoController {
 
@@ -307,53 +308,68 @@ class ModeloBalancoController {
 
     public static function listModelosWithProducts($system_unit_id) {
         global $pdo;
-    
+        global $pdop;
+
         try {
-            // Buscar todos os modelos de balanço pelo system_unit_id e os dados do usuário que criou o modelo
-            $sql = "
-                SELECT mb.*, u.login AS usuario_login
-                FROM modelos_balanco mb
-                LEFT JOIN system_users u ON mb.usuario_id = u.id
-                WHERE mb.system_unit_id = :system_unit_id
-            ";
-    
-            $stmt = $pdo->prepare($sql);
-            $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
-            $stmt->execute();
-            $modelos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+            // Buscar todos os modelos de balanço pelo system_unit_id
+            $sqlModelos = "
+            SELECT mb.*
+            FROM modelos_balanco mb
+            WHERE mb.system_unit_id = :system_unit_id
+        ";
+
+            $stmtModelos = $pdo->prepare($sqlModelos);
+            $stmtModelos->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
+            $stmtModelos->execute();
+            $modelos = $stmtModelos->fetchAll(PDO::FETCH_ASSOC);
+
             if (!$modelos) {
                 self::sendResponse(false, 'Nenhum modelo encontrado.', [], 404); // 404 Not Found
+                return;
             }
-    
-            // Buscar os produtos associados a cada modelo
+
             $modelosComProdutos = [];
             foreach ($modelos as $modelo) {
                 $modelo_id = $modelo['id'];
-    
+
+                // Obter o login do usuário do banco `pdop`
+                $stmtUsuario = $pdop->prepare("
+                SELECT login AS usuario_login
+                FROM system_users
+                WHERE id = :usuario_id
+            ");
+                $stmtUsuario->bindParam(':usuario_id', $modelo['usuario_id'], PDO::PARAM_INT);
+                $stmtUsuario->execute();
+                $usuario = $stmtUsuario->fetch(PDO::FETCH_ASSOC);
+
+                // Adicionar login do usuário ao modelo
+                $modelo['usuario_login'] = $usuario ? $usuario['usuario_login'] : null;
+
+                // Buscar os produtos associados ao modelo no banco `$pdo`
                 $stmtItens = $pdo->prepare("
-                    SELECT mbi.*, p.nome AS nome_produto, p.und AS und_produto, p.codigo AS codigo_produto
-                    FROM modelos_balanco_itens mbi
-                    LEFT JOIN products p ON mbi.id_produto = p.id AND mbi.system_unit_id = p.system_unit_id
-                    WHERE mbi.id_modelo = :modelo_id AND mbi.system_unit_id = :system_unit_id
-                ");
+                SELECT mbi.*, p.nome AS nome_produto, p.und AS und_produto, p.codigo AS codigo_produto
+                FROM modelos_balanco_itens mbi
+                LEFT JOIN products p ON mbi.id_produto = p.id AND mbi.system_unit_id = p.system_unit_id
+                WHERE mbi.id_modelo = :modelo_id AND mbi.system_unit_id = :system_unit_id
+            ");
                 $stmtItens->bindParam(':modelo_id', $modelo_id, PDO::PARAM_INT);
                 $stmtItens->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
                 $stmtItens->execute();
                 $itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
-    
+
                 // Adicionar os itens ao modelo atual
                 $modelo['itens'] = $itens;
                 $modelosComProdutos[] = $modelo;
             }
-    
+
             // Retornar os modelos e seus produtos
             self::sendResponse(true, 'Modelos com produtos listados com sucesso.', ['modelos' => $modelosComProdutos], 200); // 200 OK
-    
+
         } catch (Exception $e) {
             self::sendResponse(false, 'Erro ao listar modelos com produtos: ' . $e->getMessage(), [], 500);
         }
     }
+
 
 
     public static function toggleModeloStatus($system_unit_id, $tag, $status) {
