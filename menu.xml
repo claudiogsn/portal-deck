@@ -96,7 +96,7 @@
       </menuitem>
     </menu>
   </menuitem>
-  <menuitem label="_t{Documents}">
+  <menuitem label="Escritório Virtual">
     <icon>far:file-alt fa-fw</icon>
     <menu>
       <menuitem label="_t{Documents}">
@@ -109,27 +109,27 @@
       </menuitem>
     </menu>
   </menuitem>
-  <menuitem label="_t{Posts}">
+  <menuitem label="Vistorias de Loja">
     <icon>far:newspaper fa-fw</icon>
     <menu>
-      <menuitem label="_t{News management}">
+      <menuitem label="Lançar Vistoria">
         <action>SystemPostList</action>
         <icon>fas:pen-square fa-fw</icon>
       </menuitem>
-      <menuitem label="_t{List news}">
+      <menuitem label="Visualizar Vistorias">
         <action>SystemPostFeedView</action>
         <icon>fas:newspaper fa-fw</icon>
       </menuitem>
     </menu>
   </menuitem>
-  <menuitem label="Wiki">
+  <menuitem label="POP (Doc Operação)">
     <icon>fas:globe fa-fw</icon>
     <menu>
-      <menuitem label="_t{Page management}">
+      <menuitem label="Cadastrar POP">
         <action>SystemWikiList</action>
         <icon>fab fa fa-fw fa-fw</icon>
       </menuitem>
-      <menuitem label="_t{Search pages}">
+      <menuitem label="Listar POP">
         <action>SystemWikiSearchList</action>
         <icon>fa fa fa-fw fa-fw</icon>
       </menuitem>
