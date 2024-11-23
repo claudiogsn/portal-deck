@@ -3,3 +3,4 @@ app/config/communication.ini
 app/config/log.ini
 app/config/sample.ini
 *.ini
+app/config/communication.ini
