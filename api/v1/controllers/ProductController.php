@@ -1,5 +1,7 @@
 <?php
 
+date_default_timezone_set('America/Rio_Branco');
+
 require_once __DIR__ . '/../database/db.php'; // Ajustando o caminho para o arquivo db.php
 
 class ProductController {

@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('America/Rio_Branco');
 
 
 ini_set('post_max_size', '100M');

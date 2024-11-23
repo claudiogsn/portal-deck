@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('America/Rio_Branco');
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
