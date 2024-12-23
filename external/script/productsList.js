@@ -85,12 +85,15 @@ $(document).ready(function () {
         });
 
         filteredProducts.forEach(product => {
-            const movimentacoes = product.atividade_recente.map(mov => `
+            const movimentacoes = product.atividade_recente
+            .sort((a, b) => a.data - b.data) // Ordena pela data (mais antiga primeiro)
+            .map(mov => `
                 <div class="activity">
                     <i class="material-icons">${mov.tipo_mov === 'entrada' ? 'arrow_forward' : 'arrow_back'}</i>
-                    ${new Date(mov.data).toLocaleDateString('pt-BR')} - Doc: ${mov.doc} - Quantidade: ${mov.quantidade}
+                    ${mov.data} - Doc: ${mov.doc} - Quantidade: ${mov.quantidade}
                 </div>
             `).join('');
+        
 
             const fichaTecnica = product.ficha_tecnica.map(insumo => `
                 <tr>
