@@ -307,6 +307,7 @@ class ModeloBalancoController {
                 'modelo' => [
                     'id' => $modelo['id'],
                     'tag' => $modelo['tag'],
+                    'nome' => $modelo['nome'],
                     'system_unit_id' => $modelo['system_unit_id'],
                     'system_unit_name' => $modelo['system_unit_name'],
                     // Adicione outros campos relevantes do modelo, se necessário

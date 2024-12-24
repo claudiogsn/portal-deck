@@ -192,7 +192,8 @@
                 'http://localhost/portal-deck/api/v1/index.php';
     
             let isAuthenticated = false;
-    
+            let modeloNome = '';
+
             function showLoader() {
                 $('#pageLoader').fadeIn();
             }
@@ -251,7 +252,8 @@
     
                     if (response.data && response.data.success) {
                         const { modelo, itens } = response.data;
-                        $('#pageTitle').text(`Realizar Balanço - ${modelo.system_unit_name}`);
+                        modeloNome = modelo.nome;
+                        $('#pageTitle').text(`Realizar Balanço - ${modelo.system_unit_name} - Modelo: ${modelo.nome}`);
                         renderItensByCategory(itens);
                     } else {
                         swal("Erro", "Falha ao carregar itens: " + response.data.message, "error");
@@ -327,6 +329,7 @@
                         method: 'saveBalanceItems',
                         data: {
                             system_unit_id: parseInt(system_unit_id, 10),
+                            tipo_mov: modeloNome,
                             itens: itens
                         }
                     });

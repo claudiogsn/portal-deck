@@ -63,6 +63,7 @@ $(document).ready(function () {
                 <tr>
                     <td><input type="checkbox" id="balanco-${balanco.doc}" class="chk-col-blue balanco-checkbox" data-doc="${balanco.doc}"><label for="balanco-${balanco.doc}"> </label></td>
                     <td>${balanco.doc}</td>
+                    <td>${balanco.tipo_mov}</td>
                     <td>${new Date(balanco.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td><button class="btn btn-info btnDetalhes" data-doc="${balanco.doc}">Ver Detalhes</button></td>
                 </tr>
@@ -129,7 +130,7 @@ $(document).ready(function () {
         const tbody = $('#detalhesBalanco');
         tbody.empty();
 
-        $('#balancoModal .modal-title').text(`Detalhes do Balanço - Doc: ${balanco.doc}`);
+        $('#balancoModal .modal-title').text(`Detalhes do Balanço - Doc: ${balanco.doc} - Modelo: ${balanco.tipo_mov}`);
 
         balanco.itens.forEach(item => {
             tbody.append(`

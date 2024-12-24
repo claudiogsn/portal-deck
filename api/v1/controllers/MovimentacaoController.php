@@ -187,7 +187,8 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
         // Constrói a base da consulta
         $query = "
             SELECT 
-                m.doc, 
+                m.doc,
+                COALESCE(m.tipo_mov, 'Não Informado') AS tipo_mov,
                 JSON_ARRAYAGG(
                     JSON_OBJECT(
                         'produto', m.produto, 
@@ -257,6 +258,7 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
             $stmt = $pdo->prepare("
             SELECT 
                 m.doc,
+                coalesce(m.tipo_mov, 'Não Informado') AS tipo_mov,
                 p.codigo as produto_codigo,
                 p.nome AS produto_nome,
                 m.quantidade,
@@ -289,6 +291,7 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
                 'success' => true,
                 'balance' => [
                     'doc' => $movimentacoes[0]['doc'],
+                    'tipo_mov' => $movimentacoes[0]['tipo_mov'],
                     'usuario_nome' => $usuario ? $usuario['usuario_nome'] : 'Usuário não encontrado',
                     'created_at' => $movimentacoes[0]['created_at'],
                     'itens' => []
@@ -362,11 +365,14 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
                 $produto = $item['codigo'];
                 $seq = $item['seq'];
                 $quantidade = $item['quantidade'];
+                $tipo_mov = $data['tipo_mov'];
+                print_r($tipo_mov);
+                exit();
 
                 // Inserção no banco de dados
-                $stmt = $pdo->prepare("INSERT INTO movimentacao (system_unit_id, system_unit_id_destino, doc, tipo, produto, seq, data, quantidade, usuario_id) 
-                                       VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)");
-                $stmt->execute([$system_unit_id, $system_unit_id_destino, $doc, $tipo, $produto, $seq, $quantidade, $usuario_id]);
+                $stmt = $pdo->prepare("INSERT INTO movimentacao (system_unit_id, system_unit_id_destino, doc, tipo,tipo_mov, produto, seq, data, quantidade, usuario_id) 
+                                       VALUES (?, ?, ?, ?, ?,?, ?, NOW(), ?, ?)");
+                $stmt->execute([$system_unit_id, $system_unit_id_destino, $doc, $tipo, $tipo_mov, $produto, $seq, $quantidade, $usuario_id]);
 
                 if ($stmt->rowCount() > 0) {
                     // Atualiza o saldo do estoque após a movimentação
