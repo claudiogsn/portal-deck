@@ -366,8 +366,7 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
                 $seq = $item['seq'];
                 $quantidade = $item['quantidade'];
                 $tipo_mov = $data['tipo_mov'];
-                print_r($tipo_mov);
-                exit();
+                
 
                 // Inserção no banco de dados
                 $stmt = $pdo->prepare("INSERT INTO movimentacao (system_unit_id, system_unit_id_destino, doc, tipo,tipo_mov, produto, seq, data, quantidade, usuario_id) 
