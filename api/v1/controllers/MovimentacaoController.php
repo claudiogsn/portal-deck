@@ -366,26 +366,12 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
                 $seq = $item['seq'];
                 $quantidade = $item['quantidade'];
                 $tipo_mov = $data['tipo_mov'];
-                
+
 
                 // Inserção no banco de dados
                 $stmt = $pdo->prepare("INSERT INTO movimentacao (system_unit_id, system_unit_id_destino, doc, tipo,tipo_mov, produto, seq, data, quantidade, usuario_id) 
                                        VALUES (?, ?, ?, ?, ?,?, ?, NOW(), ?, ?)");
                 $stmt->execute([$system_unit_id, $system_unit_id_destino, $doc, $tipo, $tipo_mov, $produto, $seq, $quantidade, $usuario_id]);
-
-                if ($stmt->rowCount() > 0) {
-                    // Atualiza o saldo do estoque após a movimentação
-                    $productResponse = ProductController::updateStockBalance($system_unit_id, $produto, $quantidade, $doc);
-                    if (!$productResponse['success']) {
-                        // Se a atualização do saldo falhar, faz rollback e retorna o erro
-                        $pdo->rollBack();
-                        return array('success' => false, 'message' => 'Movimentação criada, mas falha ao atualizar saldo: ' . $productResponse['message']);
-                    }
-                } else {
-                    // Se a inserção do item falhar, faz rollback e retorna o erro
-                    $pdo->rollBack();
-                    return array('success' => false, 'message' => 'Falha ao criar movimentação para o item com código ' . $produto);
-                }
             }
 
             // Commit da transação
