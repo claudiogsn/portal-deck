@@ -130,7 +130,7 @@ $(document).ready(function () {
         const tbody = $('#detalhesBalanco');
         tbody.empty();
 
-        $('#balancoModal .modal-title').text(`Detalhes do Balanço - Doc: ${balanco.doc} - Modelo: ${balanco.tipo_mov}`);
+        $('#balancoModal .modal-title').text(`Detalhes do Balanço - Doc: ${balanco.doc} - Modelo: ${balanco.tipo_mov} - Empresa: ${balanco.unit_name}`);
 
         balanco.itens.forEach(item => {
             tbody.append(`
@@ -144,6 +144,11 @@ $(document).ready(function () {
 
         // Armazena o documento do balanço no modal para exportação
         $('#balancoModal').data('doc', balanco.doc);
+        $('#balancoModal').data('tipoMov', balanco.tipo_mov);
+        $('#balancoModal').data('unitName', balanco.unit_name);
+        $('#balancoModal').data('usuario_nome', balanco.usuario_nome);
+        $('#balancoModal').data('created_at', balanco.created_at);
+
     }
 
     // Exportar balanços selecionados para Excel
@@ -220,27 +225,70 @@ $('#btnExportarSelecionados').click(async function () {
         XLSX.writeFile(wb, `${fileName}.xlsx`);
     }
 
+    async function imprimirRelatorio(docNumber, dataItens, detalhes) {
+        try {
+            // Carregar o arquivo HTML externo da pasta reports
+            const response = await fetch('./reports/impressao_balanco.html');
+            if (!response.ok) {
+                throw new Error('Erro ao carregar o template de impressão');
+            }
+
+            const templateHtml = await response.text();
+
+            // Substituir os placeholders no template com os dados reais
+            let htmlToPrint = templateHtml
+                .replace('{{DOC_NUMBER}}', docNumber)
+                .replace('{{ESTABELECIMENTO}}', detalhes.estabelecimento)
+                .replace('{{DATA_BALANCO}}', detalhes.dataBalanco)
+                .replace('{{USUARIO}}', detalhes.usuario)
+                .replace('{{TIPO_MOV}}', detalhes.tipoMov)
+                .replace('{{DATA_ITENS}}', gerarLinhasTabela(dataItens));
+
+            // Abrir uma nova janela para impressão
+            const printWindow = window.open('', '_blank');
+            printWindow.document.open();
+            printWindow.document.write(htmlToPrint);
+            printWindow.document.close();
+
+            // Adicionar um delay para garantir o carregamento antes de imprimir
+            printWindow.onload = () => {
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close(); // Opcional, fecha a janela de impressão após o uso
+            };
+        } catch (error) {
+            console.error('Erro ao imprimir o relatório:', error);
+            alert('Erro ao imprimir o relatório. Verifique o console para mais detalhes.');
+        }
+    }
+
+
+    function gerarLinhasTabela(dataItens) {
+        return dataItens.map(item => `
+        <tr>
+            <td>${item.produto}</td>
+            <td>${item.quantidade}</td>
+            <td>${item.categoria}</td>
+        </tr>
+    `).join('');
+    }
+
+
     $('#btnImprimir').click(function () {
         const docNumber = $('#balancoModal').data('doc');
-        const printContents = document.getElementById('detalhesBalanco').outerHTML;
-        const originalContents = document.body.innerHTML;
+        const dataItens = currentItems;
+        const detalhes = {
+            estabelecimento: $('#balancoModal').data('unitName'),
+            tipoMov:  $('#balancoModal').data('tipoMov'),
+            dataBalanco: $('#balancoModal').data('created_at'),
+            usuario: $('#balancoModal').data('usuario_nome')
+        };
 
-        document.body.innerHTML = `
-            <html>
-            <head>
-                <title>Impressão do Balanço</title>
-                <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
-            </head>
-            <body>
-                <h2>Detalhes do Balanço - Doc: ${docNumber}</h2>
-                <table class="table table-bordered">${printContents}</table>
-            </body>
-            </html>
-        `;
-
-        window.print();
-        document.body.innerHTML = originalContents;
-        location.reload();
+        if (dataItens && dataItens.length > 0) {
+            imprimirRelatorio(docNumber, dataItens, detalhes);
+        } else {
+            alert('Nenhum item para imprimir.');
+        }
     });
 
     $('#btnBuscar').click(function () {

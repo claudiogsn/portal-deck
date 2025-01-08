@@ -287,12 +287,19 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
             $stmtUser->execute();
             $usuario = $stmtUser->fetch(PDO::FETCH_ASSOC);
 
+            // Consulta o nome da unidade
+            $stmtUnit = $pdop->prepare("SELECT name FROM system_unit WHERE id = :id LIMIT 1");
+            $stmtUnit->bindParam(':id', $system_unit_id, PDO::PARAM_INT);
+            $stmtUnit->execute();
+            $unit_name = $stmtUnit->fetch(PDO::FETCH_ASSOC);
+
             $response = [
                 'success' => true,
                 'balance' => [
+                    'unit_name' => $unit_name['name'],
                     'doc' => $movimentacoes[0]['doc'],
                     'tipo_mov' => $movimentacoes[0]['tipo_mov'],
-                    'usuario_nome' => $usuario ? $usuario['usuario_nome'] : 'Usuário não encontrado',
+                    'usuario_nome' => $usuario ? $usuario['usuario_nome'] : 'Balanco Externo',
                     'created_at' => $movimentacoes[0]['created_at'],
                     'itens' => []
                 ]
