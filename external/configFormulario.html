@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuração de Formulário</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Favicon-->
+    <link rel="icon" href="bsb/favicon.ico" type="image/x-icon">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&subset=latin,cyrillic-ext" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" type="text/css">
+
+    <!-- Bootstrap Core Css -->
+    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
+
+    <!-- Waves Effect Css -->
+    <link href="bsb/plugins/node-waves/waves.css" rel="stylesheet" />
+
+    <!-- Animation Css -->
+    <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet" />
+
+    <!-- JQuery DataTable Css -->
+    <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
+
+    <!-- SweetAlert Css -->
+    <link href="bsb/plugins/sweetalert/sweetalert.css" rel="stylesheet" />
+
+    <!-- Custom Css -->
+    <link href="bsb/css/style.css" rel="stylesheet">
+    <link href="bsb/css/themes/all-themes.css" rel="stylesheet" />
+
+    <!-- JQuery Steps CSS (para o Wizard) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.css">
+
+    <!-- MultiSelect CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/multi-select/0.9.12/css/multi-select.css">
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        .phone-mockup {
+            background: url('phone.png') no-repeat center;
+            background-size: contain;
+            width: 190px;
+            height: 388px;
+            position: relative;
+            margin: auto;
+        }
+        .preview-content {
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            overflow-y: auto;
+            padding: 5px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .preview-content img {
+            max-width: 80px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body class="theme-blue">
+
+<div class="container-fluid">
+
+    <div class="row clearfix">
+        <!-- Formulário Configurações -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="header">
+                    <h2>Configuração de Formulário NPS</h2>
+                </div>
+                <div class="body">
+                    <form id="mainForm">
+                        <div class="row clearfix">
+                            <div class="col-md-12">
+                                <label>Logo</label>
+                                <input type="file" id="logoInput" class="form-control">
+                            </div>
+                            <div class="col-md-12">
+                                <label>Título</label>
+                                <input type="text" id="tituloInput" class="form-control">
+                            </div>
+                            <div class="col-md-12">
+                                <label>Explicação</label>
+                                <textarea id="explicacaoInput" class="form-control"></textarea>
+                            </div>
+                            <div class="col-md-12 text-right">
+                                <button type="button" class="btn btn-primary waves-effect" onclick="openModalPergunta()">Nova Pergunta</button>
+                                <button type="button" class="btn btn-success waves-effect" onclick="salvarFormulario()">Salvar Formulário</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Grid de Perguntas -->
+            <div class="card">
+                <div class="header">
+                    <h2>Perguntas Cadastradas</h2>
+                </div>
+                <div class="body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Tipo</th>
+                                <th>Ações</th>
+                            </tr>
+                            </thead>
+                            <tbody id="perguntasGrid"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="header">
+                    <h2>Preview</h2>
+                </div>
+                <div class="body">
+                    <div class="phone-mockup">
+                        <div class="preview-content" id="previewContent">
+                            <p>Seu formulário aparecerá aqui!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pergunta -->
+<div class="modal fade" id="modalPergunta" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="modalTitle">Nova Pergunta</h4>
+            </div>
+            <div class="modal-body">
+                <form id="formPergunta">
+                    <input type="hidden" id="editIndex">
+                    <div class="form-group">
+                        <label for="tituloPergunta">Título</label>
+                        <input type="text" id="tituloPergunta" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="explicacaoPergunta">Explicação</label>
+                        <textarea id="explicacaoPergunta" class="form-control"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoPergunta">Tipo de Resposta</label>
+                        <select id="tipoPergunta" class="form-control">
+                            <option value="sim_nao">Sim ou Não</option>
+                            <option value="avaliacao_numerica">Avaliação Numérica (0 a 10)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link waves-effect" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary waves-effect" onclick="salvarPergunta()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Jquery Core Js (Versão 2.2.4 para Compatibilidade com Bootstrap) -->
+<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+<!-- Bootstrap Core Js -->
+<script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+<!-- Waves Effect Plugin Js -->
+<script src="bsb/plugins/node-waves/waves.js"></script>
+<!-- SweetAlert Plugin Js -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- jQuery Steps JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.min.js"></script>
+<!-- jQuery Validation JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js"></script>
+<!-- jQuery Multi-Select -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/multi-select/0.9.12/js/jquery.multi-select.min.js"></script>
+
+<!-- Adicionar Axios e SweetAlert -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<script>
+    let perguntas = [];
+
+    $('#logoInput').on('change', function(event) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            $('#previewContent').find('img.logo-preview').remove();
+            $('#previewContent').prepend(`<img src="${e.target.result}" class="logo-preview">`);
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    });
+
+    $('#tituloInput, #explicacaoInput').on('input', atualizarPreview);
+
+    function atualizarPreview() {
+        const titulo = $('#tituloInput').val();
+        const explicacao = $('#explicacaoInput').val();
+
+        let perguntasHTML = perguntas.map(p => `
+      <div style="margin-bottom:10px;">
+        <strong>${p.titulo}</strong><br>
+        <small>${p.explicacao}</small><br>
+        ${p.tipo === 'sim_nao' ? 'Sim ou Não' : 'Nota de 0 a 10'}
+      </div>
+    `).join('');
+
+        $('#previewContent').html(`
+      ${$('#previewContent').find('img.logo-preview')[0] ? $('#previewContent').find('img.logo-preview')[0].outerHTML : ''}
+      <h4>${titulo}</h4>
+      <p>${explicacao}</p>
+      ${perguntasHTML}
+    `);
+    }
+
+
+    function openModalPergunta() {
+        $('#modalPergunta').modal('show');
+    }
+
+    function salvarPergunta() {
+        Swal.fire({
+            title: 'Deseja salvar essa pergunta?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const novaPergunta = {
+                    titulo: $('#tituloPergunta').val(),
+                    explicacao: $('#explicacaoPergunta').val(),
+                    tipo: $('#tipoPergunta').val()
+                };
+
+                perguntas.push(novaPergunta);
+
+                $('#perguntasGrid').append(`
+        <tr>
+          <td>${novaPergunta.titulo}</td>
+          <td>${novaPergunta.tipo === 'sim_nao' ? 'Sim ou Não' : 'Nota de 0 a 10'}</td>
+          <td>
+            <button class="btn btn-danger btn-xs" onclick="excluirPergunta(${perguntas.length -1})">Excluir</button>
+          </td>
+        </tr>
+      `);
+
+                $('#modalPergunta').modal('hide');
+                atualizarPreview();
+                $('#formPergunta')[0].reset();
+            }
+        });
+    }
+
+    function excluirPergunta(index) {
+        Swal.fire({
+            title: 'Deseja excluir essa pergunta?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, excluir',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                perguntas.splice(index, 1);
+                renderizarPerguntas();
+                atualizarPreview();
+            }
+        });
+    }
+
+    function renderizarPerguntas() {
+        $('#perguntasGrid').html('');
+        perguntas.forEach((p, idx) => {
+            $('#perguntasGrid').append(`
+      <tr>
+        <td>${p.titulo}</td>
+        <td>${p.tipo === 'sim_nao' ? 'Sim ou Não' : 'Nota de 0 a 10'}</td>
+        <td>
+          <button class="btn btn-danger btn-xs" onclick="excluirPergunta(${idx})">Excluir</button>
+        </td>
+      </tr>
+    `);
+        });
+    }
+</script>
+</body>
+</html>

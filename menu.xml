@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <menu>
+  <menuitem label="NPS">
+    <icon>fas:tachometer-alt fa-fw</icon>
+    <menu>
+      <menuitem label="Configurar Formulario">
+        <action>ConfigurarFomulario</action>
+        <icon>fas:cogs fa-fw</icon>
+      </menuitem>
+    </menu>
+  </menuitem>
   <menuitem label="Estoque">
     <icon>fas:warehouse fa-fw</icon>
     <menu>
