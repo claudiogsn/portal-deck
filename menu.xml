@@ -7,6 +7,10 @@
         <action>ConfigurarFomulario</action>
         <icon>fas:cogs fa-fw</icon>
       </menuitem>
+      <menuitem label="Respostas Por Pedidos">
+        <action>RespostasPedidos</action>
+        <icon>fas:clipboard-list fa-fw</icon>
+      </menuitem>
     </menu>
   </menuitem>
   <menuitem label="Estoque">
