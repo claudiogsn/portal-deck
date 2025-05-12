@@ -4,13 +4,72 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Respostas NPS por Pedido</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
-    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet" />
-    <link href="bsb/plugins/sweetalert/sweetalert.css" rel="stylesheet" />
-    <link href="bsb/css/style.css" rel="stylesheet" />
+
+    <!-- Fonts e Ícones -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&subset=latin,cyrillic-ext" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- CSS -->
+    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="bsb/plugins/node-waves/waves.css" rel="stylesheet">
+    <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet">
+    <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
+    <link href="bsb/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+    <link href="bsb/css/style.css" rel="stylesheet">
+    <link href="bsb/css/themes/all-themes.css" rel="stylesheet">
+
+    <style>
+        .header-card {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 10px;
+        }
+
+        .spinner {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+
 </head>
+
 <body class="theme-blue">
-<div class="container-fluid mt-5">
+<div class="container-fluid">
+    <!-- HEADER CARD DE FILTROS -->
+    <div class="header-card">
+        <div class="row">
+            <div class="col-md-3">
+                <label for="dataInicial">Data Inicial</label>
+                <input type="datetime-local" id="dataInicial" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="dataFinal">Data Final</label>
+                <input type="datetime-local" id="dataFinal" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="buscaGeral">Buscar</label>
+                <input type="text" id="buscaGeral" class="form-control" placeholder="Telefone, Cliente ou Pedido">
+            </div>
+            <div class="col-md-2">
+                <label>&nbsp;</label>
+                <button id="btnFiltrar" class="btn btn-primary btn-block">Buscar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABELA -->
     <div class="card">
         <div class="header">
             <h2>Respostas por Pedido</h2>
@@ -27,15 +86,13 @@
                     <th>Ações</th>
                 </tr>
                 </thead>
-                <tbody>
-                <!-- Conteúdo dinâmico -->
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 </div>
 
-<!-- Modal -->
+<!-- MODAL -->
 <div id="modalRespostas" class="modal fade" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -44,9 +101,7 @@
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <ul id="listaRespostas" class="list-group">
-                    <!-- Respostas serão listadas aqui -->
-                </ul>
+                <ul id="listaRespostas" class="list-group"></ul>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
@@ -55,17 +110,24 @@
     </div>
 </div>
 
+<!-- SCRIPTS -->
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
 <script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="bsb/plugins/node-waves/waves.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="bsb/plugins/jquery-datatable/jquery.dataTables.js"></script>
+<script src="bsb/plugins/jquery-datatable/skin/bootstrap/js/dataTables.bootstrap.js"></script>
+
 
 <script>
     $(document).ready(function () {
         const baseUrl = window.location.hostname !== 'localhost'
             ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
             : 'http://localhost/dispatch-bot-api/index.php';
+
+        let dadosOriginal = [];
 
         async function carregarRespostas() {
             try {
@@ -75,7 +137,8 @@
                 });
 
                 if (response.data.success && response.data.dados) {
-                    renderTabela(response.data.dados);
+                    dadosOriginal = response.data.dados;
+                    renderTabelaFiltrada();
                 } else {
                     Swal.fire("Erro", "Nenhum dado encontrado.", "error");
                 }
@@ -85,23 +148,50 @@
             }
         }
 
+        function parseDataPtBr(dataStr) {
+            const [dia, mes, anoHora] = dataStr.split('/');
+            const [ano, hora] = anoHora.split(' ');
+            return new Date(`${ano}-${mes}-${dia}T${hora || '00:00'}`);
+        }
+
+        function renderTabelaFiltrada() {
+            const busca = $('#buscaGeral').val().toLowerCase();
+            const dataIni = $('#dataInicial').val() ? new Date($('#dataInicial').val()) : null;
+            const dataFim = $('#dataFinal').val() ? new Date($('#dataFinal').val()) : null;
+
+            const resultados = dadosOriginal.filter(pedido => {
+                const dataPedido = parseDataPtBr(pedido.created_at);
+
+                const dentroPeriodo =
+                    (!dataIni || dataPedido >= dataIni) &&
+                    (!dataFim || dataPedido <= dataFim);
+
+                const texto = `${pedido.telefone} ${pedido.nome_cliente} ${pedido.chave_pedido}`.toLowerCase();
+                const contemTexto = texto.includes(busca);
+
+                return dentroPeriodo && contemTexto;
+            });
+
+            renderTabela(resultados);
+        }
+
         function renderTabela(dados) {
             const tbody = $("#respostasTable tbody");
             tbody.empty();
 
             dados.forEach(pedido => {
                 const linha = $(`
-            <tr>
-              <td>${pedido.chave_pedido}</td>
-              <td>${pedido.nome_cliente}</td>
-              <td>${pedido.telefone}</td>
-              <td>${pedido.tipo_entrega}</td>
-              <td>${pedido.created_at}</td>
-              <td>
-                <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Ver Respostas</button>
-              </td>
-            </tr>
-          `);
+        <tr>
+          <td>${pedido.chave_pedido}</td>
+          <td>${pedido.nome_cliente}</td>
+          <td>${pedido.telefone}</td>
+          <td>${pedido.tipo_entrega}</td>
+          <td>${pedido.created_at}</td>
+          <td>
+            <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Ver Respostas</button>
+          </td>
+        </tr>
+      `);
                 tbody.append(linha);
             });
 
@@ -120,13 +210,13 @@
 
                 if (resp.pergunta.includes("imagem") && resp.resposta) {
                     item = `<li class="list-group-item">
-        <strong>${resp.pergunta}:</strong><br>
-        <a href="${resp.resposta}" target="_blank" rel="noopener noreferrer">Clique para abrir a mídia</a>
-      </li>`;
+          <strong>${resp.pergunta}:</strong><br>
+          <a href="${resp.resposta}" target="_blank" rel="noopener noreferrer">Clique para abrir a mídia</a>
+        </li>`;
                 } else {
                     item = `<li class="list-group-item">
-        <strong>${resp.pergunta}:</strong> ${resp.resposta ? resp.resposta : '---'}
-      </li>`;
+          <strong>${resp.pergunta}:</strong> ${resp.resposta ? resp.resposta : '---'}
+        </li>`;
                 }
 
                 lista.append(item);
@@ -135,6 +225,15 @@
             $("#modalRespostas").modal("show");
         }
 
+        $('#buscaGeral').on('input', renderTabelaFiltrada);
+        $('#btnFiltrar').on('click', renderTabelaFiltrada);
+
+        const now = new Date();
+
+        const pad = (n) => String(n).padStart(2, '0');
+        const hojeData = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        $('#dataInicial').val(`${hojeData}T00:00`);
+        $('#dataFinal').val(`${hojeData}T23:59`);
 
         carregarRespostas();
     });
