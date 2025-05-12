@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Respostas NPS por Pedido</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet" />
+    <link href="bsb/plugins/sweetalert/sweetalert.css" rel="stylesheet" />
+    <link href="bsb/css/style.css" rel="stylesheet" />
+</head>
+<body class="theme-blue">
+<div class="container-fluid mt-5">
+    <div class="card">
+        <div class="header">
+            <h2>Respostas por Pedido</h2>
+        </div>
+        <div class="body table-responsive">
+            <table class="table table-bordered table-striped" id="respostasTable">
+                <thead>
+                <tr>
+                    <th>Pedido</th>
+                    <th>Cliente</th>
+                    <th>Telefone</th>
+                    <th>Entrega</th>
+                    <th>Data</th>
+                    <th>Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- Conteúdo dinâmico -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modalRespostas" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Respostas do Pedido</h4>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <ul id="listaRespostas" class="list-group">
+                    <!-- Respostas serão listadas aqui -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+<script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    $(document).ready(function () {
+        const baseUrl = window.location.hostname !== 'localhost'
+            ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
+            : 'http://localhost/dispatch-bot-api/index.php';
+
+        async function carregarRespostas() {
+            try {
+                const response = await axios.post(baseUrl, {
+                    method: 'ListarAgrupadoPorPedido',
+                    data: {}
+                });
+
+                if (response.data.success && response.data.dados) {
+                    renderTabela(response.data.dados);
+                } else {
+                    Swal.fire("Erro", "Nenhum dado encontrado.", "error");
+                }
+            } catch (error) {
+                console.error("Erro ao carregar respostas:", error);
+                Swal.fire("Erro", "Erro na requisição", "error");
+            }
+        }
+
+        function renderTabela(dados) {
+            const tbody = $("#respostasTable tbody");
+            tbody.empty();
+
+            dados.forEach(pedido => {
+                const linha = $(`
+            <tr>
+              <td>${pedido.chave_pedido}</td>
+              <td>${pedido.nome_cliente}</td>
+              <td>${pedido.telefone}</td>
+              <td>${pedido.tipo_entrega}</td>
+              <td>${pedido.created_at}</td>
+              <td>
+                <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Ver Respostas</button>
+              </td>
+            </tr>
+          `);
+                tbody.append(linha);
+            });
+
+            $(".btnVer").on("click", function () {
+                const pedido = $(this).data("pedido");
+                mostrarRespostas(pedido);
+            });
+        }
+
+        function mostrarRespostas(pedido) {
+            const lista = $("#listaRespostas");
+            lista.empty();
+
+            pedido.respostas.forEach(resp => {
+                let item;
+
+                if (resp.pergunta.includes("imagem") && resp.resposta) {
+                    item = `<li class="list-group-item">
+        <strong>${resp.pergunta}:</strong><br>
+        <a href="${resp.resposta}" target="_blank" rel="noopener noreferrer">Clique para abrir a mídia</a>
+      </li>`;
+                } else {
+                    item = `<li class="list-group-item">
+        <strong>${resp.pergunta}:</strong> ${resp.resposta ? resp.resposta : '---'}
+      </li>`;
+                }
+
+                lista.append(item);
+            });
+
+            $("#modalRespostas").modal("show");
+        }
+
+
+        carregarRespostas();
+    });
+</script>
+</body>
+</html>
