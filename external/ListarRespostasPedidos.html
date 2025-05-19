@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
@@ -19,6 +20,12 @@
     <link href="bsb/css/themes/all-themes.css" rel="stylesheet">
 
     <style>
+        #mapaResposta {
+            min-height: 300px;
+            width: 100%;
+            display: block !important;
+        }
+
         .header-card {
             margin-top: 20px;
             padding: 20px;
@@ -41,202 +48,555 @@
             align-items: center;
             margin-bottom: 20px;
         }
+
+        .highlight-nota {
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+            display: inline-block;
+        }
+
+        .nota-detrator {
+            background-color: #f44336;
+            /* vermelho */
+            color: white;
+            box-shadow: 0 0 10px #f44336;
+        }
+
+        .nota-neutro {
+            background-color: #ff9800;
+            /* laranja */
+            color: white;
+            box-shadow: 0 0 10px #ff9800;
+        }
+
+        .nota-promotor {
+            background-color: #4caf50;
+            /* verde */
+            color: white;
+            box-shadow: 0 0 10px #4caf50;
+        }
     </style>
 
 </head>
 
 <body class="theme-blue">
-<div class="container-fluid">
-    <!-- HEADER CARD DE FILTROS -->
-    <div class="header-card">
-        <div class="row">
-            <div class="col-md-3">
-                <label for="dataInicial">Data Inicial</label>
-                <input type="datetime-local" id="dataInicial" class="form-control">
+    <div class="container-fluid">
+        <!-- HEADER CARD DE FILTROS -->
+        <div class="header-card">
+            <div class="row">
+                <div class="col-md-2">
+                    <label for="dataInicial">Data Inicial</label>
+                    <input type="datetime-local" id="dataInicial" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label for="dataFinal">Data Final</label>
+                    <input type="datetime-local" id="dataFinal" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="buscaGeral">Buscar</label>
+                    <input type="text" id="buscaGeral" class="form-control" placeholder="Telefone, Cliente ou Pedido">
+                </div>
+                <div class="col-md-2">
+                    <label for="filtroLoja">Filtrar por Loja</label>
+                    <select id="filtroLoja" class="form-control">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filtroNota">Filtrar por Nota</label>
+                    <select id="filtroNota" class="form-control">
+                        <option value="">Todas</option>
+                        <option value="detrator">Detratores (0–6)</option>
+                        <option value="neutro">Neutros (7–8)</option>
+                        <option value="promotor">Promotores (9–10)</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label>&nbsp;</label>
+                    <button id="btnFiltrar" class="btn btn-primary btn-block">Buscar</button>
+                </div>
             </div>
-            <div class="col-md-3">
-                <label for="dataFinal">Data Final</label>
-                <input type="datetime-local" id="dataFinal" class="form-control">
+        </div>
+
+        <!-- TABELA -->
+        <div class="card">
+            <div class="header">
+                <h2>Respostas por Pedido</h2>
             </div>
-            <div class="col-md-4">
-                <label for="buscaGeral">Buscar</label>
-                <input type="text" id="buscaGeral" class="form-control" placeholder="Telefone, Cliente ou Pedido">
-            </div>
-            <div class="col-md-2">
-                <label>&nbsp;</label>
-                <button id="btnFiltrar" class="btn btn-primary btn-block">Buscar</button>
+            <div class="body table-responsive">
+                <table class="table table-bordered table-striped" id="respostasTable">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Loja</th>
+                            <th>Data</th>
+                            <th>Nota(s)</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- TABELA -->
-    <div class="card">
-        <div class="header">
-            <h2>Respostas por Pedido</h2>
-        </div>
-        <div class="body table-responsive">
-            <table class="table table-bordered table-striped" id="respostasTable">
-                <thead>
-                <tr>
-                    <th>Pedido</th>
-                    <th>Cliente</th>
-                    <th>Telefone</th>
-                    <th>Entrega</th>
-                    <th>Data</th>
-                    <th>Ações</th>
-                </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+    <!-- MODAL RESPOSTAS -->
+    <div id="modalRespostas" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Pedidos do Cliente</h4>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="filtroDataInicio">Data Inicial</label>
+                            <input type="date" id="filtroDataInicio" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="filtroDataFim">Data Final</label>
+                            <input type="date" id="filtroDataFim" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="tabelaPedidosCliente">
+                            <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Data/Hora</th>
+                                <th>Loja</th>
+                                <th>Resposta</th>
+                                <th>Ações</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- MODAL -->
-<div id="modalRespostas" class="modal fade" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Respostas do Pedido</h4>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <ul id="listaRespostas" class="list-group"></ul>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
+
+
+    <!-- MODAL DETALHES DO PEDIDO -->
+    <div id="modalDetalhesPedido" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Resumo Completo do Pedido</h4>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body" id="detalhesConteudo">
+                    <!-- Conteúdo preenchido via JS -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+    </div>
 
-<!-- SCRIPTS -->
-<!-- Scripts -->
-<script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
-<script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="bsb/plugins/node-waves/waves.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="bsb/plugins/jquery-datatable/jquery.dataTables.js"></script>
-<script src="bsb/plugins/jquery-datatable/skin/bootstrap/js/dataTables.bootstrap.js"></script>
+    <!-- SCRIPTS -->
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="bsb/plugins/node-waves/waves.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="bsb/plugins/jquery-datatable/jquery.dataTables.js"></script>
+    <script src="bsb/plugins/jquery-datatable/skin/bootstrap/js/dataTables.bootstrap.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCR1Ah_f24oWlsWaOoZf1rqIPuTzS0nyA8"></script>
 
 
-<script>
-    $(document).ready(function () {
-        const baseUrl = window.location.hostname !== 'localhost'
-            ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
-            : 'http://localhost/dispatch-bot-api/index.php';
 
-        let dadosOriginal = [];
+    <script>
+        $(document).ready(function () {
+            const baseUrl = window.location.hostname !== 'localhost'
+                ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
+                : 'http://localhost/dispatch-bot-api/index.php';
 
-        async function carregarRespostas() {
-            try {
-                const response = await axios.post(baseUrl, {
-                    method: 'ListarAgrupadoPorPedido',
-                    data: {}
+            let dadosOriginal = [];
+
+            async function carregarEstabelecimentos() {
+                try {
+                    const response = await axios.post(baseUrl, {
+                        method: 'getNameEstabelecimentos',
+                        data: {}
+                    });
+
+                    if (response.data && Array.isArray(response.data)) {
+                        const estabelecimentos = response.data;
+
+                        // Pegando nome_fantasia únicos e ordenados
+                        const nomesFantasia = [...new Set(
+                            estabelecimentos
+                                .map(est => est.nome_fantasia?.trim())
+                                .filter(Boolean)
+                        )].sort();
+
+                        const filtroLoja = $('#filtroLoja');
+                        filtroLoja.empty().append('<option value="">Todas</option>');
+                        nomesFantasia.forEach(nome => {
+                            filtroLoja.append(`<option value="${nome}">${nome}</option>`);
+                        });
+                    } else {
+                        console.warn("Resposta inesperada da API de estabelecimentos.");
+                    }
+                } catch (err) {
+                    console.error("Erro ao carregar estabelecimentos:", err);
+                }
+            }
+
+            async function carregarRespostas() {
+                try {
+                    const response = await axios.post(baseUrl, {
+                        method: 'ListarAgrupadoPorPedido',
+                        data: {}
+                    });
+
+                    if (response.data.success && response.data.dados) {
+                        dadosOriginal = response.data.dados;
+                        renderTabelaFiltrada();
+                    } else {
+                        Swal.fire("Erro", "Nenhum dado encontrado.", "error");
+                    }
+                } catch (error) {
+                    console.error("Erro ao carregar respostas:", error);
+                    Swal.fire("Erro", "Erro na requisição", "error");
+                }
+            }
+
+            function parseDataPtBr(dataStr) {
+                const [dia, mes, anoHora] = dataStr.split('/');
+                const [ano, hora] = anoHora.split(' ');
+                return new Date(`${ano}-${mes}-${dia}T${hora || '00:00'}`);
+            }
+
+            function renderTabelaFiltrada() {
+                const busca = $('#buscaGeral').val().toLowerCase();
+                const dataIni = $('#dataInicial').val() ? new Date($('#dataInicial').val()) : null;
+                const dataFim = $('#dataFinal').val() ? new Date($('#dataFinal').val()) : null;
+                const nomeLojaSelecionado = $('#filtroLoja').val();
+                const notaFiltro = $('#filtroNota').val();
+
+                const resultados = dadosOriginal.filter(pedido => {
+                    const dataPedido = parseDataPtBr(pedido.created_at);
+                    const dentroPeriodo = (!dataIni || dataPedido >= dataIni) && (!dataFim || dataPedido <= dataFim);
+                    const texto = `${pedido.telefone} ${pedido.nome_cliente} ${pedido.chave_pedido}`.toLowerCase();
+                    const contemTexto = texto.includes(busca);
+
+                    const lojaDoPedido = pedido.nome_loja?.trim() || '';
+                    const lojaOK = !nomeLojaSelecionado || lojaDoPedido === nomeLojaSelecionado;
+
+                    let notaOK = true;
+                    if (notaFiltro) {
+                        const notas = pedido.respostas
+                            .filter(r => r.tipo_resposta === 'nota')
+                            .map(r => parseInt(r.resposta || '0'));
+
+                        if (notaFiltro === 'detrator') {
+                            notaOK = notas.some(n => n <= 6);
+                        } else if (notaFiltro === 'neutro') {
+                            notaOK = notas.some(n => n == 7);
+                        } else if (notaFiltro === 'neutro') {
+                            notaOK = notas.some(n => n == 8);
+                        } else if (notaFiltro === 'promotor') {
+                            notaOK = notas.some(n => n >= 9);
+                        }
+                    }
+
+                    return dentroPeriodo && contemTexto && lojaOK && notaOK;
                 });
 
-                if (response.data.success && response.data.dados) {
-                    dadosOriginal = response.data.dados;
-                    renderTabelaFiltrada();
-                } else {
-                    Swal.fire("Erro", "Nenhum dado encontrado.", "error");
-                }
-            } catch (error) {
-                console.error("Erro ao carregar respostas:", error);
-                Swal.fire("Erro", "Erro na requisição", "error");
+                renderTabela(resultados);
             }
-        }
 
-        function parseDataPtBr(dataStr) {
-            const [dia, mes, anoHora] = dataStr.split('/');
-            const [ano, hora] = anoHora.split(' ');
-            return new Date(`${ano}-${mes}-${dia}T${hora || '00:00'}`);
-        }
+            function renderTabela(dados) {
+                const notaFiltroSelecionado = $('#filtroNota').val();
+                const tbody = $("#respostasTable tbody");
+                tbody.empty();
 
-        function renderTabelaFiltrada() {
-            const busca = $('#buscaGeral').val().toLowerCase();
-            const dataIni = $('#dataInicial').val() ? new Date($('#dataInicial').val()) : null;
-            const dataFim = $('#dataFinal').val() ? new Date($('#dataFinal').val()) : null;
+                dados.forEach(pedido => {
+                    const notas = pedido.respostas
+                        .filter(r => r.tipo_resposta === 'nota')
+                        .map(r => {
+                            const valor = parseInt(r.resposta || '0');
+                            let classe = '';
 
-            const resultados = dadosOriginal.filter(pedido => {
-                const dataPedido = parseDataPtBr(pedido.created_at);
+                            if (notaFiltroSelecionado === 'detrator' && valor <= 6) {
+                                classe = 'highlight-nota nota-detrator';
+                            } else if (notaFiltroSelecionado === 'neutro' && valor >= 7 && valor <= 8) {
+                                classe = 'highlight-nota nota-neutro';
+                            } else if (notaFiltroSelecionado === 'promotor' && valor >= 9) {
+                                classe = 'highlight-nota nota-promotor';
+                            }
 
-                const dentroPeriodo =
-                    (!dataIni || dataPedido >= dataIni) &&
-                    (!dataFim || dataPedido <= dataFim);
+                            const notaFormatada = classe
+                                ? `<span class="${classe}">${r.pergunta}: ${r.resposta}</span>`
+                                : `${r.pergunta}: ${r.resposta ?? '---'}`;
 
-                const texto = `${pedido.telefone} ${pedido.nome_cliente} ${pedido.chave_pedido}`.toLowerCase();
-                const contemTexto = texto.includes(busca);
+                            return notaFormatada;
+                        })
+                        .join('<br>');
 
-                return dentroPeriodo && contemTexto;
-            });
+                    const linha = $(`
+                <tr>
+                    <td>${pedido.nome_cliente}</td>
+                    <td>${pedido.telefone}</td>
+                    <td>${pedido.nome_loja}</td>
+                    <td>${pedido.created_at}</td>
+                    <td>${notas}</td>
+                    <td>
+                        <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Ver Detalhes</button>
+                    </td>
+                </tr>
+            `);
+                    tbody.append(linha);
+                });
 
-            renderTabela(resultados);
-        }
+                $(".btnVer").on("click", function () {
+                    const pedido = $(this).data("pedido");
+                    mostrarRespostas(pedido);
+                });
+            }
 
-        function renderTabela(dados) {
-            const tbody = $("#respostasTable tbody");
-            tbody.empty();
 
-            dados.forEach(pedido => {
-                const linha = $(`
+            function mostrarRespostas(pedido) {
+                const telefone = pedido.telefone.replace(/\D/g, '');
+                Swal.fire({
+                    title: 'Buscando pedidos do cliente...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                axios.post(baseUrl, {
+                    method: 'ListarPedidosPorTelefone',
+                    data: { telefone }
+                }).then(resp => {
+                    Swal.close();
+
+                    const pedidos = resp.data.data || [];
+                    const tabela = $("#tabelaPedidosCliente tbody");
+                    tabela.empty();
+
+                    pedidos.forEach(p => {
+                        const linha = $(`
         <tr>
-          <td>${pedido.chave_pedido}</td>
-          <td>${pedido.nome_cliente}</td>
-          <td>${pedido.telefone}</td>
-          <td>${pedido.tipo_entrega}</td>
-          <td>${pedido.created_at}</td>
-          <td>
-            <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Ver Respostas</button>
-          </td>
+          <td>${p.chave_pedido}</td>
+          <td>${p.hora_abertura}</td>
+          <td>${p.nome_loja}</td>
+          <td>${p.respondeu ? '<span class="label label-success">Respondeu</span>' : '<span class="label label-default">Sem Resposta</span>'}</td>
+          <td><button class="btn btn-sm btn-primary btnVerDetalhePedido" data-chave="${p.chave_pedido}">Ver Detalhes</button></td>
         </tr>
       `);
-                tbody.append(linha);
-            });
+                        tabela.append(linha);
+                    });
 
-            $(".btnVer").on("click", function () {
-                const pedido = $(this).data("pedido");
-                mostrarRespostas(pedido);
-            });
-        }
+                    // Abre o modal
+                    $("#modalRespostas").modal("show");
 
-        function mostrarRespostas(pedido) {
-            const lista = $("#listaRespostas");
-            lista.empty();
+                    // Bind do botão "Ver Detalhes"
+                    $(".btnVerDetalhePedido").off('click').on("click", function () {
+                        const chave = $(this).data("chave");
+                        carregarDetalhesDoPedido(chave);
+                    });
 
-            pedido.respostas.forEach(resp => {
-                let item;
+                    // Filtro por data
+                    $("#filtroDataInicio, #filtroDataFim").off('change').on('change', function () {
+                        const inicio = $("#filtroDataInicio").val();
+                        const fim = $("#filtroDataFim").val();
 
-                if (resp.pergunta.includes("imagem") && resp.resposta) {
-                    item = `<li class="list-group-item">
-          <strong>${resp.pergunta}:</strong><br>
-          <a href="${resp.resposta}" target="_blank" rel="noopener noreferrer">Clique para abrir a mídia</a>
-        </li>`;
-                } else {
-                    item = `<li class="list-group-item">
-          <strong>${resp.pergunta}:</strong> ${resp.resposta ? resp.resposta : '---'}
-        </li>`;
-                }
+                        const rows = $("#tabelaPedidosCliente tbody tr");
 
-                lista.append(item);
-            });
+                        rows.each(function () {
+                            const dataTexto = $(this).find("td:nth-child(2)").text().split(" ")[0]; // data do pedido
+                            const dataFormatada = new Date(dataTexto.split("/").reverse().join("-"));
+                            const dataIni = inicio ? new Date(inicio + "T00:00") : null;
+                            const dataFim = fim ? new Date(fim + "T23:59") : null;
 
-            $("#modalRespostas").modal("show");
-        }
+                            const exibir = (!dataIni || dataFormatada >= dataIni) &&
+                                (!dataFim || dataFormatada <= dataFim);
 
-        $('#buscaGeral').on('input', renderTabelaFiltrada);
-        $('#btnFiltrar').on('click', renderTabelaFiltrada);
+                            $(this).toggle(exibir);
+                        });
+                    });
 
-        const now = new Date();
+                }).catch(() => {
+                    Swal.close();
+                    Swal.fire('Erro', 'Falha ao buscar pedidos.', 'error');
+                });
+            }
 
-        const pad = (n) => String(n).padStart(2, '0');
-        const hojeData = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-        $('#dataInicial').val(`${hojeData}T00:00`);
-        $('#dataFinal').val(`${hojeData}T23:59`);
+            function renderizarMapaResposta(lat, lng, divId = 'mapaResposta') {
+                if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
 
-        carregarRespostas();
-    });
-</script>
+                const mapaContainer = document.getElementById(divId);
+                if (!mapaContainer || typeof google === 'undefined' || !google.maps) return;
+
+                setTimeout(() => {
+                    const map = new google.maps.Map(mapaContainer, {
+                        center: { lat: lat, lng: lng },
+                        zoom: 16
+                    });
+
+                    new google.maps.Marker({
+                        position: { lat: lat, lng: lng },
+                        map: map,
+                        title: 'Local da resposta'
+                    });
+                }, 500);
+            }
+
+            function carregarDetalhesDoPedido(chave) {
+                Swal.fire({
+                    title: 'Carregando detalhes...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                axios.post(baseUrl, {
+                    method: 'GetDetalhesDoPedido',
+                    data: { chave_pedido: chave }
+                }).then(resp => {
+                    Swal.close();
+
+                    if (!resp.data.success || !resp.data.pedido) {
+                        return Swal.fire('Erro', 'Não foi possível carregar os detalhes.', 'error');
+                    }
+
+                    const p = resp.data.pedido;
+                    const respostas = resp.data.respostas || [];
+                    const parada = (resp.data.paradas || [])[0];
+                    const whatsapp = resp.data.whatsapp_mensagem;
+                    const nps = resp.data.mensagem_nps;
+
+                    let extraInfoHtml = '';
+                    let lat, lng, temCoords = false;
+
+                    if (respostas.length > 0) {
+                        const r = respostas[0];
+                        lat = parseFloat(r.latitude);
+                        lng = parseFloat(r.longitude);
+                        temCoords = !isNaN(lat) && !isNaN(lng);
+
+                        extraInfoHtml = `
+        <p><strong>IP:</strong> ${r.ip || '---'}</p>
+        <p><strong>Dispositivo:</strong> ${r.tipo_dispositivo || '---'}</p>
+        <p><strong>Plataforma:</strong> ${r.plataforma || '---'}</p>
+        <p><strong>Latitude / Longitude:</strong> ${r.latitude || '---'} / ${r.longitude || '---'}</p>
+        ${temCoords ? `<div id="mapaResposta" style="width: 100%; height: 250px;"></div>` : ''}
+      `;
+                    }
+
+                    const respostasHtml = respostas.map(r => `
+      <li class="list-group-item">
+        <strong>${r.pergunta} ? </strong> ${r.resposta ?? '---'}
+      </li>
+    `).join('');
+
+                    const detalhesHtml = `
+      <div class="card">
+        <div class="body">
+          <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active">
+              <a href="#tab_respostas" data-toggle="tab"><i class="material-icons">feedback</i> RESPOSTAS</a>
+            </li>
+            <li role="presentation">
+              <a href="#tab_pedido" data-toggle="tab"><i class="material-icons">description</i> PEDIDO</a>
+            </li>
+            <li role="presentation">
+              <a href="#tab_entrega" data-toggle="tab"><i class="material-icons">local_shipping</i> ENTREGA</a>
+            </li>
+            <li role="presentation">
+              <a href="#tab_disparos" data-toggle="tab"><i class="material-icons">send</i> DISPAROS</a>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <div role="tabpanel" class="tab-pane fade in active" id="tab_respostas">
+              <ul class="list-group mb-3">${respostasHtml}</ul>
+              ${extraInfoHtml}
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="tab_pedido">
+              <p><strong>Chave:</strong> ${p.chave_pedido}</p>
+              <p><strong>Cliente:</strong> ${p.identificador_conta}</p>
+              <p><strong>Data:</strong> ${p.hora_abertura} → ${p.hora_saida}</p>
+              <p><strong>Status:</strong> ${p.status_pedido}</p>
+              <p><strong>Modo:</strong> ${p.modo_de_conta}</p>
+              <p><strong>Tipo Entrega:</strong> ${p.tipo_entrega}</p>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="tab_entrega">
+              ${parada ? `
+                <p><strong>Endereço:</strong> ${parada.endereco}, ${parada.bairro} - ${parada.cidade}/${parada.uf}</p>
+                <p><strong>Motoboy:</strong> ${whatsapp?.nome_taxista || '---'} - <strong>Placa:</strong> ${whatsapp?.placa_veiculo || '---'}</p>
+                <p><strong>Link de rastreio:</strong> <a href="${parada.link_rastreio_pedido}" target="_blank">${parada.link_rastreio_pedido}</a></p>
+              ` : '<p>Sem dados de entrega.</p>'}
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="tab_disparos">
+              ${whatsapp ? `
+                <p><strong>WhatsApp:</strong> ${whatsapp.telefone}</p>
+                <p><strong>Status:</strong> ${whatsapp.message_status}</p>
+                <p><strong>Hora Disparo:</strong> ${whatsapp.created_at || '---'}</p>
+                <p><strong>Link de rastreio:</strong> <a href="${whatsapp.link_rastreio}" target="_blank">${whatsapp.link_rastreio}</a></p>
+              ` : '<p>Sem disparo WhatsApp.</p>'}
+              ${nps ? `
+                <p><strong>NPS:</strong> ${nps.telefone}</p>
+                <p><strong>Status:</strong> ${nps.message_status}</p>
+                <p><strong>Hora Disparo:</strong> ${nps.created_at || '---'}</p>
+                <p><strong>Link:</strong> <a href="${nps.link_nps}" target="_blank">${nps.link_nps}</a></p>
+              ` : '<p>Sem disparo NPS.</p>'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+                    $("#detalhesConteudo").html(detalhesHtml);
+                    $("#modalDetalhesPedido").modal("show");
+
+                    if (temCoords) {
+                        renderizarMapaResposta(lat, lng);
+                    }
+
+                }).catch(() => {
+                    Swal.close();
+                    Swal.fire('Erro', 'Falha ao buscar detalhes do pedido.', 'error');
+                });
+            }
+
+            // Eventos
+            $('#buscaGeral').on('input', renderTabelaFiltrada);
+            $('#btnFiltrar').on('click', renderTabelaFiltrada);
+            $('#filtroLoja').on('change', renderTabelaFiltrada);
+            $('#filtroNota').on('change', renderTabelaFiltrada);
+
+            // Inicialização com data de hoje
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const hojeData = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+            $('#dataInicial').val(`${hojeData}T00:00`);
+            $('#dataFinal').val(`${hojeData}T23:59`);
+
+            // Carrega tudo
+            carregarEstabelecimentos();
+            carregarRespostas();
+        });
+    </script>
+
 </body>
+
 </html>
