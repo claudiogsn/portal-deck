@@ -4,7 +4,7 @@
     <icon>fas:tachometer-alt fa-fw</icon>
     <menu>
       <menuitem label="Dashboard NPS">
-        <action>dashboardNps.html</action>
+        <action>DashboardNPS</action>
         <icon>fas:chart-bar fa-fw</icon>
       </menuitem>
       <menuitem label="Configurar Formulario">
