@@ -132,7 +132,9 @@
                             <th>Cliente</th>
                             <th>Telefone</th>
                             <th>Loja</th>
-                            <th>Data</th>
+                            <th id="colunaData">
+                                Data <i id="iconeOrdenacao" class="material-icons" style="font-size: 16px; vertical-align: middle;">arrow_downward</i>
+                            </th>
                             <th>Nota(s)</th>
                             <th>Ações</th>
                         </tr>
@@ -167,13 +169,13 @@
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped" id="tabelaPedidosCliente">
                             <thead>
-                            <tr>
-                                <th>Pedido</th>
-                                <th>Data/Hora</th>
-                                <th>Loja</th>
-                                <th>Resposta</th>
-                                <th>Ações</th>
-                            </tr>
+                                <tr>
+                                    <th>Pedido</th>
+                                    <th>Data</th>
+                                    <th>Loja</th>
+                                    <th>Resposta</th>
+                                    <th>Ações</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -325,10 +327,26 @@
                 renderTabela(resultados);
             }
 
+            let ordenacaoAscendente = false;
+
+            function parseDataPtBr(dataStr) {
+                const [dia, mes, anoHora] = dataStr.split('/');
+                const [ano, hora] = anoHora.split(' ');
+                return new Date(`${ano}-${mes}-${dia}T${hora || '00:00'}`);
+            }
+
+
             function renderTabela(dados) {
                 const notaFiltroSelecionado = $('#filtroNota').val();
                 const tbody = $("#respostasTable tbody");
                 tbody.empty();
+
+                // Ordenar por created_at
+               dados.sort((a, b) => {
+                    const dateA = parseDataPtBr(a.created_at);
+                    const dateB = parseDataPtBr(b.created_at);
+                    return ordenacaoAscendente ? dateA - dateB : dateB - dateA;
+                });
 
                 dados.forEach(pedido => {
                     const notas = pedido.respostas
@@ -354,18 +372,19 @@
                         .join('<br>');
 
                     const linha = $(`
-                <tr>
-                    <td>${pedido.nome_cliente}</td>
-                    <td>${pedido.telefone}</td>
-                    <td>${pedido.nome_loja}</td>
-                    <td>${pedido.created_at}</td>
-                    <td>${notas}</td>
-                    <td>
-                        <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Detalhes Cliente</button>
-                         <button class="btn btn-primary btnVerResumo" data-chave="${pedido.chave_pedido}">Detalhes do Pedido</button>
-                    </td>
-                </tr>
-            `);
+            <tr>
+                <td>${pedido.nome_cliente}</td>
+                <td>${pedido.telefone}</td>
+                <td>${pedido.nome_loja}</td>
+                <td>${pedido.created_at}</td>
+                <td>${notas}</td>
+                <td>
+                    <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Detalhes Cliente</button>
+                    <button class="btn btn-primary btnVerResumo" data-chave="${pedido.chave_pedido}">Detalhes do Pedido</button>
+                </td>
+            </tr>
+        `);
+
                     tbody.append(linha);
                 });
 
@@ -373,11 +392,14 @@
                     const pedido = $(this).data("pedido");
                     mostrarRespostas(pedido);
                 });
+
                 $(".btnVerResumo").off("click").on("click", function () {
                     const chave = $(this).data("chave");
                     carregarDetalhesDoPedido(chave);
                 });
+
             }
+
 
 
             function mostrarRespostas(pedido) {
@@ -599,6 +621,13 @@
             // Carrega tudo
             carregarEstabelecimentos();
             carregarRespostas();
+            $('#colunaData').css('cursor', 'pointer').on('click', function () {
+                ordenacaoAscendente = !ordenacaoAscendente;
+                const icone = ordenacaoAscendente ? 'arrow_upward' : 'arrow_downward';
+                $('#iconeOrdenacao').text(icone);
+                renderTabelaFiltrada();
+            });
+
         });
     </script>
 
