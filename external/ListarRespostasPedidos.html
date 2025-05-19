@@ -361,7 +361,8 @@
                     <td>${pedido.created_at}</td>
                     <td>${notas}</td>
                     <td>
-                        <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Ver Detalhes</button>
+                        <button class="btn btn-info btnVer" data-pedido='${JSON.stringify(pedido)}'>Detalhes Cliente</button>
+                         <button class="btn btn-primary btnVerResumo" data-chave="${pedido.chave_pedido}">Detalhes do Pedido</button>
                     </td>
                 </tr>
             `);
@@ -371,6 +372,10 @@
                 $(".btnVer").on("click", function () {
                     const pedido = $(this).data("pedido");
                     mostrarRespostas(pedido);
+                });
+                $(".btnVerResumo").off("click").on("click", function () {
+                    const chave = $(this).data("chave");
+                    carregarDetalhesDoPedido(chave);
                 });
             }
 
