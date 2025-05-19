@@ -128,6 +128,24 @@
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCR1Ah_f24oWlsWaOoZf1rqIPuTzS0nyA8"></script>
 
 <script>
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const minWidth = 768; // largura mínima em pixels
+
+        if (window.innerWidth < minWidth) {
+            document.body.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-center px-6">
+          <h1 class="text-2xl font-bold text-red-600 mb-4">Acesso não permitido</h1>
+          <p class="text-gray-700 text-base max-w-md">
+            Esta página foi projetada para ser utilizada apenas em dispositivos com telas maiores.
+            Tente acessar de um notebook, desktop ou tablet na horizontal.
+          </p>
+        </div>
+      `;
+            document.body.classList.add('overflow-hidden');
+        }
+    });
+    
     const baseUrl = window.location.hostname !== 'localhost'
         ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
         : 'http://localhost/dispatch-bot-api/index.php';
