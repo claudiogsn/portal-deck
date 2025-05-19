@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard NPS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800 p-6">
+<!-- Filtros -->
+<div class="flex flex-wrap gap-4 mb-6">
+    <button onclick="setRange('hoje')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">Hoje</button>
+    <button onclick="setRange('ontem')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">Ontem</button>
+    <button onclick="setRange('7dias')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">7 dias</button>
+    <button onclick="setRange('mes')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">Mês</button>
+
+    <input type="date" id="startDate" onchange="fetchData()" class="border p-2 rounded-md shadow" />
+    <input type="date" id="endDate" onchange="fetchData()" class="border p-2 rounded-md shadow" />
+
+    <select id="filtroLoja" class="border p-2 rounded-md shadow" onchange="fetchData()">
+        <option value="">Todas as Lojas</option>
+    </select>
+    <select id="filtroPerguntas" class="border p-2 rounded-md shadow" onchange="fetchData()">
+        <option value="">Todas as Perguntas</option>
+    </select>
+    <select id="filtroNota" class="border p-2 rounded-md shadow" onchange="fetchData()">
+        <option value="">Todas as Notas</option>
+        <option value="detrator">Detratores (0–6)</option>
+        <option value="neutro">Neutros (7–8)</option>
+        <option value="promotor">Promotores (9–10)</option>
+    </select>
+</div>
+
+<!-- Totalizadores -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="text-gray-500 text-sm">Total de Respostas</div>
+        <div class="text-2xl font-bold" id="totalRespostas">0</div>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="text-gray-500 text-sm">Total de Pedidos</div>
+        <div class="text-2xl font-bold" id="totalPedidos">0</div>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="text-gray-500 text-sm">% de Resposta</div>
+        <div class="text-2xl font-bold" id="percentualResposta">0%</div>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+        <div class="text-gray-500 text-sm">Promotores 😄</div>
+        <div class="text-2xl font-bold" id="promotores">0</div>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+        <div class="text-gray-500 text-sm">Neutros 😐</div>
+        <div class="text-2xl font-bold" id="neutros">0</div>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+        <div class="text-gray-500 text-sm">Detratores 😡</div>
+        <div class="text-2xl font-bold" id="detratores">0</div>
+    </div>
+</div>
+<br>
+
+<!-- Gráfico Gauge NPS -->
+<div class="flex flex-wrap gap-4 w-full">
+    <!-- Gauge principal -->
+    <div class="bg-white p-6 rounded-lg shadow mb-6 w-full md:w-[30%]">
+        <h2 class="text-lg font-semibold mb-4">NPS Score</h2>
+        <div id="npsGauge" style="height: 345px;"></div>
+    </div>
+
+    <!-- Mini gauges -->
+    <div id="miniGaugesContainer" style="height: 300px;" class="w-full md:w-[65%] grid grid-cols-2 gap-4"></div>
+</div>
+
+<div class="bg-white p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">Comentários NPS</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+            <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Loja</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comentário</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+            </tr>
+            </thead>
+            <tbody id="comentariosNpsTable" class="bg-white divide-y divide-gray-200"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL TAILWIND -->
+<div id="modalDetalhesPedido" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold">Resumo Completo do Pedido</h3>
+            <button onclick="fecharModal()" class="text-gray-500 hover:text-gray-800">&times;</button>
+        </div>
+        <div id="detalhesConteudo" class="p-6">
+            <!-- Conteúdo preenchido via JS -->
+        </div>
+        <div class="flex justify-end px-6 py-4 border-t">
+            <button onclick="fecharModal()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Fechar</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<!-- Loader -->
+<div class="bg-white p-6 rounded-lg shadow text-center" id="loader" style="display:none">
+    <div class="loader border-4 border-blue-500 h-12 w-12 rounded-full animate-spin mx-auto mb-2"></div>
+    <div>Carregando dados...</div>
+</div>
+
+
+<!-- Tippy.js e Popper.js -->
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCR1Ah_f24oWlsWaOoZf1rqIPuTzS0nyA8"></script>
+
+<script>
+    const baseUrl = window.location.hostname !== 'localhost'
+        ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
+        : 'http://localhost/dispatch-bot-api/index.php';
+
+    let filtros = {
+        dt_inicio: '',
+        dt_fim: '',
+        loja: '',
+        pergunta: '',
+        nota: ''
+    };
+
+    function fecharModal() {
+        document.getElementById('modalDetalhesPedido').classList.add('hidden');
+    }
+
+    // === Animação de Números ===
+    function animateNumber(id, start, end, duration = 1000, isPercent = false) {
+        const el = document.getElementById(id);
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const value = start + (end - start) * progress;
+            el.textContent = isPercent
+                ? value.toFixed(1).replace('.', ',') + '%'
+                : Math.round(value);
+            if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
+    // === Setar intervalo automático ===
+    function setRange(tipo) {
+        const now = new Date();
+        const start = new Date();
+
+        if (tipo === 'ontem') {
+            start.setDate(now.getDate() - 1);
+        } else if (tipo === '7dias') {
+            start.setDate(now.getDate() - 7);
+        } else if (tipo === 'mes') {
+            start.setMonth(now.getMonth() - 1);
+        }
+
+        const formatDate = (d) => d.toISOString().split('T')[0];
+        document.getElementById('startDate').value = formatDate(start);
+        document.getElementById('endDate').value = formatDate(now);
+
+        filtros.dt_inicio = formatDate(start) + ' 00:00:00';
+        filtros.dt_fim = formatDate(now) + ' 23:59:59';
+
+        carregarDashboardNps();
+    }
+
+    // === Carregar dados principais ===
+    async function carregarDashboardNps() {
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'dashNps',
+                data: {
+                    dt_inicio: filtros.dt_inicio,
+                    dt_fim: filtros.dt_fim
+                }
+            });
+
+            if (!response.data || !response.data.success) {
+                console.error('Erro na resposta da API');
+                return;
+            }
+
+            const { estatisticas, respostas } = response.data;
+
+// Filtrar por loja, se aplicável
+            const lojaSelecionada = filtros.loja;
+
+            const respostasPorLoja = estatisticas.total_respostas.filter(item =>
+                !lojaSelecionada || item.nome_loja === lojaSelecionada
+            );
+            const pedidosPorLoja = estatisticas.total_pedidos.filter(item =>
+                !lojaSelecionada || item.nome_loja === lojaSelecionada
+            );
+
+// Somar total de respostas
+            const totalRespostas = respostasPorLoja.reduce((acc, cur) => acc + (parseInt(cur.total) || 0), 0);
+
+// Somar total de pedidos
+            const totalPedidos = pedidosPorLoja.reduce((acc, cur) => acc + (parseInt(cur.total_pedidos) || 0), 0);
+
+// Calcular percentual
+            const percentualResposta = totalPedidos > 0
+                ? (totalRespostas / totalPedidos) * 100
+                : 0;
+
+// Atualizar os totalizadores
+            animateNumber('totalRespostas', 0, totalRespostas);
+            animateNumber('totalPedidos', 0, totalPedidos);
+            animateNumber('percentualResposta', 0, percentualResposta, 1000, true);
+
+
+            processarNPS(respostas);
+        } catch (err) {
+            console.error('Erro ao carregar dashboard NPS:', err);
+        }
+    }
+
+    // === Processar e calcular NPS ===
+    function processarNPS(respostas) {
+        const { loja, pergunta, nota } = filtros;
+
+        const filtrado = respostas.filter(r => {
+            if (r.metodo_resposta !== 'nota') return false;
+            if (loja && r.nome_loja !== loja) return false;
+            if (pergunta && r.pergunta !== pergunta) return false;
+
+            const notaInt = parseInt(r.resposta);
+            if (nota === 'detrator' && (notaInt < 0 || notaInt > 6)) return false;
+            if (nota === 'neutro' && (notaInt < 7 || notaInt > 8)) return false;
+            if (nota === 'promotor' && (notaInt < 9 || notaInt > 10)) return false;
+
+            return true;
+        });
+
+        let promotores = 0;
+        let neutros = 0;
+        let detratores = 0;
+
+        filtrado.forEach(r => {
+            const nota = parseInt(r.resposta);
+            if (nota >= 9 && nota <= 10) promotores++;
+            else if (nota >= 7 && nota <= 8) neutros++;
+            else if (nota >= 0 && nota <= 6) detratores++;
+        });
+
+        const totalValidas = promotores + neutros + detratores;
+
+        let npsScore = totalValidas > 0
+            ? Math.round(((promotores - detratores) / totalValidas) * 100)
+            : 0;
+
+        npsScore = Math.max(npsScore, 0); // Garante mínimo de 0
+
+        animateNumber('promotores', 0, promotores);
+        animateNumber('neutros', 0, neutros);
+        animateNumber('detratores', 0, detratores);
+
+        renderGauge(npsScore);
+
+        // ✅ Gera perguntas únicas para os mini gauges
+        const perguntasUnicas = [...new Set(
+            filtrado
+                .map(r => r.pergunta?.trim())
+                .filter(Boolean)
+        )];
+
+        renderMiniGauges(filtrado, perguntasUnicas);
+        renderTabelaComentarios(respostas);
+    }
+
+    // === Renderizar gráfico Gauge (NPS) ===
+    function renderGauge(score) {
+        const chartDom = document.getElementById('npsGauge');
+        const myChart = echarts.init(chartDom);
+
+        let cor = '#10b981'; // verde
+        if (score <= 60) cor = '#ef4444'; // vermelho
+        else if (score <= 80) cor = '#f59e0b'; // amarelo
+
+        const option = {
+            series: [
+                {
+                    type: 'gauge',
+                    startAngle: 90,
+                    endAngle: -270,
+                    min: 0,
+                    max: 100,
+                    pointer: {
+                        show: false
+                    },
+                    progress: {
+                        show: true,
+                        overlap: false,
+                        roundCap: true,
+                        clip: false,
+                        itemStyle: {
+                            color: cor
+                        }
+                    },
+                    axisLine: {
+                        lineStyle: {
+                            width: 20,
+                            color: [[1, '#e0e0e0']]
+                        }
+                    },
+                    splitLine: {
+                        show: false
+                    },
+                    axisTick: {
+                        show: false
+                    },
+                    axisLabel: {
+                        show: false
+                    },
+                    data: [
+                        {
+                            value: score,
+                            name: 'NPS',
+                            title: {
+                                offsetCenter: ['0%', '-30%'],
+                                fontSize: 14
+                            },
+                            detail: {
+                                valueAnimation: true,
+                                offsetCenter: ['0%', '0%'],
+                                fontSize: 32,
+                                color: cor,
+                                formatter: '{value}%'
+                            }
+                        }
+                    ],
+                    title: {
+                        show: true
+                    }
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+    }
+
+    function renderMiniGauges(respostas, perguntas) {
+        const container = document.getElementById('miniGaugesContainer');
+        container.innerHTML = ''; // Limpa os antigos
+
+        perguntas.forEach(pergunta => {
+            const relacionadas = respostas.filter(r => r.pergunta === pergunta);
+            let promotores = 0, neutros = 0, detratores = 0;
+
+            relacionadas.forEach(r => {
+                const nota = parseInt(r.resposta);
+                if (nota >= 9) promotores++;
+                else if (nota >= 7) neutros++;
+                else detratores++;
+            });
+
+            const total = promotores + neutros + detratores;
+            let score = total ? Math.round(((promotores - detratores) / total) * 100) : 0;
+            score = Math.max(score, 0); // Sem negativos
+
+            // Cria o container individual
+            const gaugeId = `gauge_${pergunta.replace(/\s+/g, '_')}`;
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow p-4 flex flex-col'; // removido 'items-center' daqui
+
+            card.innerHTML = `
+                <div class="w-full text-left mb-2">
+                    <h3 class="text-sm font-medium">${pergunta}</h3>
+                </div>
+                <div class="flex justify-center w-full">
+                    <div id="${gaugeId}" style="width: 100%; max-width: 120px; height: 150px;"></div>
+                </div>
+            `;
+
+            container.appendChild(card);
+
+            // Renderiza o gauge
+            const chart = echarts.init(document.getElementById(gaugeId));
+            chart.setOption({
+                series: [
+                    {
+                        type: 'gauge',
+                        startAngle: 90,
+                        endAngle: -270,
+                        pointer: { show: false },
+                        progress: {
+                            show: true,
+                            overlap: false,
+                            roundCap: true,
+                            clip: false,
+                            itemStyle: {
+                                color: getColor(score),
+                                borderWidth: 1,
+                                borderColor: '#ccc'
+                            }
+                        },
+                        axisLine: {
+                            lineStyle: {
+                                width: 10,
+                                color: [[1, '#e0e0e0']]
+                            }
+                        },
+                        axisLabel: { show: false },
+                        splitLine: { show: false },
+                        axisTick: { show: false },
+                        data: [{ value: score }],
+                        detail: {
+                            offsetCenter: ['0%', '0%'],
+                            valueAnimation: true,
+                            formatter: '{value}%',
+                            fontSize: 16,
+                            color: getColor(score)
+                        },
+                        title: { show: false }
+                    }
+                ]
+            });
+        });
+
+        function getColor(score) {
+            if (score <= 60) return '#ef4444';
+            if (score <= 80) return '#f59e0b';
+            return '#10b981';
+        }
+    }
+
+    function renderTabelaComentarios(respostas) {
+        const { loja } = filtros;
+        const container = document.getElementById('comentariosNpsTable');
+        container.innerHTML = '';
+
+        // Aplica filtro de loja se definido
+        const respostasFiltradas = loja
+            ? respostas.filter(r => r.nome_loja === loja)
+            : respostas;
+
+        const agrupado = {};
+        respostasFiltradas.forEach(r => {
+            if (!agrupado[r.chave_pedido]) agrupado[r.chave_pedido] = [];
+            agrupado[r.chave_pedido].push(r);
+        });
+
+        Object.values(agrupado).forEach(grupo => {
+            const comentario = grupo.find(r => r.metodo_resposta === 'texto');
+            console.log(comentario);
+            console.log('-----------------');
+            console.log('-----------------');
+            console.log(grupo);
+            if (!comentario) return;
+
+            const tooltipContent = grupo
+                .map(r => `<strong>${r.pergunta}:</strong> ${r.resposta}`)
+                .join('<br>');
+
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 cursor-pointer';
+            row.onclick = () => carregarDetalhesDoPedido(comentario.chave_pedido);
+            row.innerHTML = `
+            <td class="px-4 py-2 text-sm text-gray-700">${comentario.nome_loja}</td>
+            <td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">
+                <span class="comentario-tooltip" data-tippy-content="${tooltipContent}">
+                    ${comentario.resposta}
+                </span>
+            </td>
+            <td class="px-4 py-2 text-sm text-gray-500">${new Date(comentario.created_at).toLocaleString()}</td>
+        `;
+            container.appendChild(row);
+        });
+
+        // Ativa tooltips
+        tippy('.comentario-tooltip', {
+            allowHTML: true,
+            placement: 'top',
+            theme: 'light-border',
+            interactive: true,
+            delay: [200, 100],
+        });
+    }
+
+    function renderizarMapaResposta(lat, lng, divId = 'mapaResposta') {
+        if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+
+        const mapaContainer = document.getElementById(divId);
+        if (!mapaContainer || typeof google === 'undefined' || !google.maps) return;
+
+        setTimeout(() => {
+            const map = new google.maps.Map(mapaContainer, {
+                center: { lat: lat, lng: lng },
+                zoom: 16
+            });
+
+            new google.maps.Marker({
+                position: { lat: lat, lng: lng },
+                map: map,
+                title: 'Local da resposta'
+            });
+        }, 500);
+    }
+
+    function carregarDetalhesDoPedido(chave) {
+        Swal.fire({
+            title: 'Carregando detalhes...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        axios.post(baseUrl, {
+            method: 'GetDetalhesDoPedido',
+            data: { chave_pedido: chave }
+        }).then(resp => {
+            Swal.close();
+
+            if (!resp.data.success || !resp.data.pedido) {
+                return Swal.fire('Erro', 'Não foi possível carregar os detalhes.', 'error');
+            }
+
+            const p = resp.data.pedido;
+            const respostas = resp.data.respostas || [];
+            const parada = (resp.data.paradas || [])[0];
+            const whatsapp = resp.data.whatsapp_mensagem;
+            const nps = resp.data.mensagem_nps;
+
+            let extraInfoHtml = '';
+            let lat, lng, temCoords = false;
+
+            if (respostas.length > 0) {
+                const r = respostas[0];
+                lat = parseFloat(r.latitude);
+                lng = parseFloat(r.longitude);
+                temCoords = !isNaN(lat) && !isNaN(lng);
+
+                extraInfoHtml = `
+                <p><strong>IP:</strong> ${r.ip || '---'}</p>
+                <p><strong>Dispositivo:</strong> ${r.tipo_dispositivo || '---'}</p>
+                <p><strong>Plataforma:</strong> ${r.plataforma || '---'}</p>
+                <p><strong>Latitude / Longitude:</strong> ${r.latitude || '---'} / ${r.longitude || '---'}</p>
+                ${temCoords ? `<div id="mapaResposta" style="width: 100%; height: 250px;" class="mt-4 rounded"></div>` : ''}
+            `;
+            }
+
+            const respostasHtml = respostas.map(r => `
+            <li class="text-sm text-gray-700"><strong>${r.pergunta}:</strong> ${r.resposta ?? '---'}</li>
+        `).join('');
+
+            const detalhesHtml = `
+            <div>
+                <!-- Abas -->
+                <div class="mb-4 border-b border-gray-200">
+                    <nav class="flex space-x-4" id="tabsNav">
+                        <button onclick="ativarTab('tab_respostas')" class="tab-button text-blue-600 border-b-2 border-blue-600 font-medium py-2 px-4">Respostas</button>
+                        <button onclick="ativarTab('tab_pedido')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Pedido</button>
+                        <button onclick="ativarTab('tab_entrega')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Entrega</button>
+                        <button onclick="ativarTab('tab_disparos')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Disparos</button>
+                    </nav>
+                </div>
+
+                <div id="tabsContent">
+                    <div id="tab_respostas" class="tab-content block">
+                        <ul class="list-disc list-inside space-y-1 mb-4">${respostasHtml}</ul>
+                        ${extraInfoHtml}
+                    </div>
+
+                    <div id="tab_pedido" class="tab-content hidden">
+                        <p><strong>Chave:</strong> ${p.chave_pedido}</p>
+                        <p><strong>Cliente:</strong> ${p.identificador_conta}</p>
+                        <p><strong>Data:</strong> ${p.hora_abertura} → ${p.hora_saida}</p>
+                        <p><strong>Status:</strong> ${p.status_pedido}</p>
+                        <p><strong>Modo:</strong> ${p.modo_de_conta}</p>
+                        <p><strong>Tipo Entrega:</strong> ${p.tipo_entrega}</p>
+                    </div>
+
+                    <div id="tab_entrega" class="tab-content hidden">
+                        ${parada ? `
+                            <p><strong>Endereço:</strong> ${parada.endereco}, ${parada.bairro} - ${parada.cidade}/${parada.uf}</p>
+                            <p><strong>Motoboy:</strong> ${whatsapp?.nome_taxista || '---'} - <strong>Placa:</strong> ${whatsapp?.placa_veiculo || '---'}</p>
+                            <p><strong>Link de rastreio:</strong> <a href="${parada.link_rastreio_pedido}" target="_blank" class="text-blue-600 underline">${parada.link_rastreio_pedido}</a></p>
+                        ` : '<p>Sem dados de entrega.</p>'}
+                    </div>
+
+                    <div id="tab_disparos" class="tab-content hidden">
+                        ${whatsapp ? `
+                            <p><strong>WhatsApp:</strong> ${whatsapp.telefone}</p>
+                            <p><strong>Status:</strong> ${whatsapp.message_status}</p>
+                            <p><strong>Hora Disparo:</strong> ${whatsapp.created_at || '---'}</p>
+                            <p><strong>Link de rastreio:</strong> <a href="${whatsapp.link_rastreio}" target="_blank" class="text-blue-600 underline">${whatsapp.link_rastreio}</a></p>
+                        ` : '<p>Sem disparo WhatsApp.</p>'}
+
+                        ${nps ? `
+                            <p><strong>NPS:</strong> ${nps.telefone}</p>
+                            <p><strong>Status:</strong> ${nps.message_status}</p>
+                            <p><strong>Hora Disparo:</strong> ${nps.created_at || '---'}</p>
+                            <p><strong>Link:</strong> <a href="${nps.link_nps}" target="_blank" class="text-blue-600 underline">${nps.link_nps}</a></p>
+                        ` : '<p>Sem disparo NPS.</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
+
+            document.getElementById("detalhesConteudo").innerHTML = detalhesHtml;
+            document.getElementById("modalDetalhesPedido").classList.remove("hidden");
+
+            if (temCoords) {
+                renderizarMapaResposta(lat, lng);
+            }
+        }).catch(() => {
+            Swal.close();
+            Swal.fire('Erro', 'Falha ao buscar detalhes do pedido.', 'error');
+        });
+    }
+
+    function ativarTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => {
+            el.classList.add('hidden');
+        });
+        document.querySelectorAll('#tabsNav .tab-button').forEach(el => {
+            el.classList.remove('text-blue-600', 'border-blue-600', 'font-medium');
+            el.classList.add('text-gray-600');
+        });
+
+        document.getElementById(tabId)?.classList.remove('hidden');
+        const tabButton = Array.from(document.querySelectorAll('#tabsNav .tab-button')).find(btn =>
+            btn.onclick?.toString().includes(tabId)
+        );
+        if (tabButton) {
+            tabButton.classList.add('text-blue-600', 'border-b-2', 'border-blue-600', 'font-medium');
+        }
+    }
+
+
+
+    // === Carregar filtros externos ===
+    async function carregarEstabelecimentos() {
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'getNameEstabelecimentos',
+                data: {}
+            });
+
+            if (Array.isArray(response.data)) {
+                const nomes = [...new Set(response.data.map(e => e.nome_fantasia).filter(Boolean))].sort();
+                const select = document.getElementById('filtroLoja');
+                select.innerHTML = `<option value="">Todas</option>`;
+                nomes.forEach(nome => {
+                    const opt = document.createElement('option');
+                    opt.value = nome;
+                    opt.textContent = nome;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error('Erro ao carregar estabelecimentos:', e);
+        }
+    }
+
+    async function carregarPerguntas() {
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'ListQuestionsActive',
+                data: { formulario: 'nps_delivery_deck',tipo: 'nota' }
+            });
+
+            if (Array.isArray(response.data)) {
+                const perguntas = [...new Set(response.data.map(p => p.titulo).filter(Boolean))].sort();
+                const select = document.getElementById('filtroPerguntas');
+                select.innerHTML = `<option value="">Todas</option>`;
+                perguntas.forEach(titulo => {
+                    const opt = document.createElement('option');
+                    opt.value = titulo;
+                    opt.textContent = titulo;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error('Erro ao carregar perguntas:', e);
+        }
+    }
+
+    // === Eventos dos filtros ===
+    document.addEventListener('DOMContentLoaded', () => {
+        carregarEstabelecimentos();
+        carregarPerguntas();
+
+        document.getElementById('filtroLoja').addEventListener('change', (e) => {
+            filtros.loja = e.target.value;
+            carregarDashboardNps();
+        });
+
+        document.getElementById('filtroPerguntas').addEventListener('change', (e) => {
+            filtros.pergunta = e.target.value;
+            carregarDashboardNps();
+        });
+
+        document.getElementById('filtroNota').addEventListener('change', (e) => {
+            filtros.nota = e.target.value;
+            carregarDashboardNps();
+        });
+
+        document.getElementById('startDate').addEventListener('change', () => {
+            filtros.dt_inicio = document.getElementById('startDate').value + ' 00:00:00';
+            carregarDashboardNps();
+        });
+
+        document.getElementById('endDate').addEventListener('change', () => {
+            filtros.dt_fim = document.getElementById('endDate').value + ' 23:59:59';
+            carregarDashboardNps();
+        });
+
+        // Carrega com os últimos 7 dias ao abrir
+        setRange('7dias');
+    });
+</script>
+
+</body>
+
+</html>
