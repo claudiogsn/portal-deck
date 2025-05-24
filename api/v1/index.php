@@ -46,7 +46,7 @@ if (isset($data['method']) && isset($data['data'])) {
     if (isset($data['token'])){$requestToken = $data['token'];}
 
     // Métodos que não precisam de autenticação
-    $noAuthMethods = ['validateCPF', 'validateCNPJ','getModelByTag','saveBalanceItems','getUnitsByGroup','registerJobExecution','persistSales','consolidateSalesByGroup'];
+    $noAuthMethods = ['validateCPF', 'validateCNPJ','getModelByTag','getModelByTagCompras','saveBalanceItems','saveBalanceItemsCompras','getUnitsByGroup','registerJobExecution','persistSales','consolidateSalesByGroup'];
 
     if (!in_array($method, $noAuthMethods)) {
         if (!isset($requestToken)) {
@@ -182,12 +182,28 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros obrigatórios ausentes: nome, usuario_id ou itens'];
                 }
                 break;
+            case 'createModeloCompras':
+                if (isset($requestData['nome']) && isset($requestData['usuario_id']) && isset($requestData['itens'])) {
+                    $response = ModeloBalancoController::createModeloCompras($requestData);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros obrigatórios ausentes: nome, usuario_id ou itens'];
+                }
+                break;
             case 'updateModelo':
                 if (isset($requestData['id'])) {
                     $response = ModeloBalancoController::updateModelo($requestData['id'], $requestData);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetro id ausente'];
+                }
+                break;
+            case 'editModeloCompras':
+                if (isset($requestData['nome']) && isset($requestData['usuario_id']) && isset($requestData['itens'])) {
+                    $response = ModeloBalancoController::editModeloCompras($requestData);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros obrigatórios ausentes: nome, usuario_id ou itens'];
                 }
                 break;
             case 'deleteModelo':
@@ -198,12 +214,12 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro id ausente'];
                 }
                 break;
-            case 'listModelos':
-                $response = ModeloBalancoController::listModelos();
+            case 'listModelosCompras':
+                $response = ModeloBalancoController::listModelosCompras();
                 break;
-            case 'listItensByModelo':
+            case 'listItensByModeloCompras':
                 if (isset($requestData['id'])) {
-                    $response = ModeloBalancoController::listItensByModelo($requestData['id'], $requestData['system_unit_id']);
+                    $response = ModeloBalancoController::listItensByModeloCompras($requestData['id'], $requestData['system_unit_id']);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetro id ausente'];
@@ -226,10 +242,26 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro tag ausente'];
                 }
                 break;
+            case 'getModelByTagCompras':
+                if (isset($requestData['tag'])) {
+                    $response = ModeloBalancoController::getModelByTagCompras($requestData['tag']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro tag ausente'];
+                }
+                break;
             
             case  'saveBalanceItems':
                 if (isset($requestData['system_unit_id']) && isset($requestData['itens'])) {
                     $response = MovimentacaoController::saveBalanceItems($requestData);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros system_unit_id ou itens ausente'];
+                }
+                break;
+            case  'saveCompraItems':
+                if (isset($requestData['system_unit_id']) && isset($requestData['itens'])) {
+                    $response = MovimentacaoController::saveCompraItemsCompras($requestData);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetros system_unit_id ou itens ausente'];
@@ -249,6 +281,19 @@ if (isset($data['method']) && isset($data['data'])) {
                         $response = ['error' => 'Parâmetro system_unit_id ausente'];
                     }
                     break;
+            case 'listCompras':
+                if (isset($requestData['system_unit_id'])) {
+                    // Verifica se as datas estão presentes e as atribui, caso contrário passa null
+                    $data_inicial = isset($requestData['data_inicial']) ? $requestData['data_inicial'] : null;
+                    $data_final = isset($requestData['data_final']) ? $requestData['data_final'] : null;
+
+                    // Chama o método listBalance com os parâmetros corretos
+                    $response = MovimentacaoController::listCompras($requestData['system_unit_id'], $data_inicial, $data_final);
+                } else {
+                    http_response_code(400); // Código HTTP 400 para Bad Request
+                    $response = ['error' => 'Parâmetro system_unit_id ausente'];
+                }
+                break;
 
                 case 'getBalanceByDoc':
                     if (isset($requestData['system_unit_id']) && isset($requestData['doc'])) {
@@ -258,6 +303,14 @@ if (isset($data['method']) && isset($data['data'])) {
                         $response = ['error' => 'Parâmetro system_unit_id ou doc ausente'];
                     }
                     break;
+            case 'getComprasByDoc':
+                if (isset($requestData['system_unit_id']) && isset($requestData['doc'])) {
+                    $response = MovimentacaoController::getComprasByDoc($requestData['system_unit_id'], $requestData['doc']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro system_unit_id ou doc ausente'];
+                }
+                break;
                 case 'createTransferItems':
                     $response = MovimentacaoController::createTransferItems($requestData);
                     break;
@@ -503,6 +556,14 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
+            case 'listModelosWithProductsCompras':
+                if (isset($requestData['unit_id'])) {
+                    $response = ModeloBalancoController::listModelosWithProductsCompras($requestData['unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro unit_id ausente'];
+                }
+                break;
 
                 case 'toggleModeloStatus':
                    
@@ -513,6 +574,15 @@ if (isset($data['method']) && isset($data['data'])) {
                         $response = ['error' => 'Parâmetro ausentes'];
                     }
                     break;
+            case 'toggleModeloStatusCompras':
+
+                if (isset($requestData['unit_id'])) {
+                    $response = ModeloBalancoController::toggleModeloStatusCompras($requestData['unit_id'],$requestData['tag'],$requestData['status']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro ausentes'];
+                }
+                break;
                     
             case 'getProductCards':
                 if (isset ($requestData['system_unit_id'])){
@@ -659,6 +729,14 @@ if (isset($data['method']) && isset($data['data'])) {
             case 'validateTagExists':
                 if (isset($requestData['tag'])) {
                     $response = ModeloBalancoController::validateTagExists($requestData['tag']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro tag ausente'];
+                }
+                break;
+            case 'validateTagExistsCompras':
+                if (isset($requestData['tag'])) {
+                    $response = ModeloBalancoController::validateTagExistsCompras($requestData['tag']);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetro tag ausente'];
