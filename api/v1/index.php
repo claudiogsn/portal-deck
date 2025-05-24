@@ -46,7 +46,7 @@ if (isset($data['method']) && isset($data['data'])) {
     if (isset($data['token'])){$requestToken = $data['token'];}
 
     // Métodos que não precisam de autenticação
-    $noAuthMethods = ['validateCPF', 'validateCNPJ','getModelByTag','getModelByTagCompras','saveBalanceItems','saveBalanceItemsCompras','getUnitsByGroup','registerJobExecution','persistSales','consolidateSalesByGroup'];
+    $noAuthMethods = ['validateCPF', 'validateCNPJ','getModelByTag','getModelByTagCompras','saveBalanceItems','saveComprasItems','getUnitsByGroup','registerJobExecution','persistSales','consolidateSalesByGroup'];
 
     if (!in_array($method, $noAuthMethods)) {
         if (!isset($requestToken)) {
@@ -259,9 +259,9 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros system_unit_id ou itens ausente'];
                 }
                 break;
-            case  'saveCompraItems':
+            case  'saveComprasItems':
                 if (isset($requestData['system_unit_id']) && isset($requestData['itens'])) {
-                    $response = MovimentacaoController::saveCompraItemsCompras($requestData);
+                    $response = MovimentacaoController::saveComprasItems($requestData);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetros system_unit_id ou itens ausente'];

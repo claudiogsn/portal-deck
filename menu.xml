@@ -21,34 +21,120 @@
     <icon>fas:warehouse fa-fw</icon>
     <menu>
       <menuitem label="Produtos">
-        <icon>fas:clipboard-list fa-fw</icon>
+        <icon>fas:boxes fa-fw</icon>
         <menu>
           <menuitem label="Cadastro de Produtos">
             <action>ProductsList</action>
-            <icon>fas:clipboard-list fa-fw</icon>
+            <icon>fas:circle fa-fw</icon>
           </menuitem>
           <menuitem label="Fichas Técnicas">
             <action>CompositionsList</action>
-            <icon>fas:clipboard-list fa-fw</icon>
+            <icon>fas:circle fa-fw</icon>
           </menuitem>
         </menu>
       </menuitem>
-      <menuitem label="Balanco">
-        <icon>fas:clipboard-list fa-fw</icon>
+      <menuitem label="Contagem">
+        <icon>fas:balance-scale fa-fw</icon>
         <menu>
-          <menuitem label="Modelos de Balanço">
+          <menuitem label="Modelos de Contagem">
             <action>CreateBalanco</action>
-            <icon>fas:clipboard-list fa-fw</icon>
+            <icon>fas:circle fa-fw</icon>
           </menuitem>
-          <menuitem label="Relatório de Balanços">
+          <menuitem label="Relatório de Contagem">
             <action>ListBalanco</action>
-            <icon>fas:clipboard-list fa-fw</icon>
+            <icon>fas:circle fa-fw</icon>
           </menuitem>
         </menu>
       </menuitem>
-      <menuitem label="Transferência Assitida">
-        <action>TransferenciaAssitida</action>
+      <menuitem label="Compras">
+        <icon>fas:balance-scale fa-fw</icon>
+        <menu>
+          <menuitem label="Modelos de Requisição de Compras">
+            <action>CreateModeloCompras</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+          <menuitem label="Relatório de Requisição de Compras">
+            <action>ListBalanco</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+        </menu>
+      </menuitem>
+      <menuitem label="Previsão Demanda">
+        <icon>fas:database fa-fw</icon>
+        <menu>
+          <menuitem label="Previsão de Demada - Loja">
+            <action>TransferenciaAssitida</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+          <menuitem label="Previsão de Demada - Produção">
+            <action>PrevisaoDemanda</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+        </menu>
+      </menuitem>
+      <menuitem label="Compra">
+        <icon>fas:dolly-flatbed fa-fw</icon>
+        <menu>
+          <menuitem label="Previsão de Compras">
+            <action>PrevisaoCompras</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+        </menu>
+      </menuitem>
+      <menuitem label="Transferências">
         <icon>fas:arrows-alt-h fa-fw</icon>
+        <menu>
+          <menuitem label="Transferência Manual">
+            <action>TransferenciaManual</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+        </menu>
+      </menuitem>
+      <menuitem label="Movimentações">
+        <icon>fas:external-link-alt fa-fw</icon>
+        <menu>
+          <menuitem label="Aprovação de Movimentações">
+            <action>AprovarMovimentacoes</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+          <menuitem label="Consultar Movimentações">
+            <action>ListarMovimentacoes</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+          <menuitem label="Extrato Insumo">
+            <action>ExtratoInsumo</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+          <menuitem label="Ajuste de Saldo">
+            <action>AjusteSaldo</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+          <menuitem label="Ajuste de Preço de Custo">
+            <action>AjustePrecoCusto</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+        </menu>
+      </menuitem>
+      <menuitem label="Importar Compras">
+        <action>ImportComprasCsv</action>
+        <icon>fas:file-excel fa-fw</icon>
+      </menuitem>
+      <menuitem label="Diferenças de Estoque">
+        <icon>fas:code fa-fw</icon>
+        <menu>
+          <menuitem label="Relatório de Diferenças">
+            <action>RelatorioDiferencas</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+          <menuitem label="Consolidar Diferenças">
+            <action>DiferencaEstoque</action>
+            <icon>fas:circle fa-fw</icon>
+          </menuitem>
+        </menu>
+      </menuitem>
+      <menuitem label="Vendas Detalhadas">
+        <action>VendasDetalhado</action>
+        <icon>fas:newspaper fa-fw</icon>
       </menuitem>
     </menu>
   </menuitem>

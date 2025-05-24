@@ -3,3 +3,5 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 RewriteRule ^balanco/([a-zA-Z0-9-]+)/?$ balanco.php?tag=$1 [L]
+
+RewriteRule ^compras/([a-zA-Z0-9-]+)/?$ compras.php?tag=$1 [L]

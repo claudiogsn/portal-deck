@@ -609,7 +609,7 @@ class ModeloBalancoController {
 
             // Buscar itens associados ao modelo e agrupá-los por categoria no banco `$pdo`
             $stmtItens = $pdo->prepare("
-            SELECT mbi.*, c.nome AS nome_produto, p.und AS und_produto, p.codigo AS codigo_produto, c.nome AS nome_categoria, p.preco_custo as preco_custo
+            SELECT mbi.*, p.nome AS nome_produto, p.und AS und_produto, p.codigo AS codigo_produto, c.nome AS nome_categoria, p.preco_custo as preco_custo
             FROM modelos_compras_itens mbi
             LEFT JOIN products p ON mbi.id_produto = p.id AND mbi.system_unit_id = p.system_unit_id
             LEFT JOIN categorias c ON p.categoria = c.codigo AND p.system_unit_id = c.system_unit_id

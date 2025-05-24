@@ -160,6 +160,16 @@ class MovimentacaoController {
 
         return $movimentacao ? $movimentacao['doc'] : $tipo . '-000000';
     }
+    public static function getLastMovCompras($system_unit_id,$tipo) {
+        global $pdo;
+
+        $stmt = $pdo->prepare("SELECT * FROM requisicao_compras WHERE system_unit_id = :system_unit_id ORDER BY created_at DESC LIMIT 1");
+        $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $movimentacao = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $movimentacao ? $movimentacao['doc'] : $tipo . '-000000';
+    }
 
     // Função para incrementar o documento (doc)
     private static function incrementDoc($ultimoDoc, $prefixo) {
@@ -389,6 +399,109 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
             // Rollback em caso de erro
             $pdo->rollBack();
             return array('success' => false, 'message' => 'Erro ao criar movimentação: ' . $e->getMessage());
+        }
+    }
+
+    public static function saveComprasItems($data) {
+        global $pdo;
+
+        // Validação de campos obrigatórios no corpo principal
+        $requiredFields = ['system_unit_id', 'data', 'itens', 'solicitante_nome'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                return ['success' => false, 'message' => "O campo '$field' é obrigatório."];
+            }
+        }
+
+        if (!is_array($data['itens']) || count($data['itens']) === 0) {
+            return ['success' => false, 'message' => 'É necessário incluir ao menos um item.'];
+        }
+
+        // Extrai dados principais
+        $system_unit_id = $data['system_unit_id'];
+        $usuario_id = isset($data['usuario_id']) ? $data['usuario_id'] : 0;
+        $solicitante_nome = $data['solicitante_nome'];
+        $data_solicitacao = $data['data'];
+        $itens = $data['itens'];
+
+        // Gera número de documento
+        $ultimoDoc = self::getLastMovCompras($system_unit_id, 'rc');
+        $doc = self::incrementDoc($ultimoDoc, 'rc');
+
+        try {
+            $pdo->beginTransaction();
+
+            // === Insere o cabeçalho da requisição ===
+            $stmt = $pdo->prepare("
+            INSERT INTO requisicao_compras (
+                status, system_unit_id, doc, data, usuario_id, solicitante_nome, created_at, updated_at
+            ) VALUES (
+                1, ?, ?, ?, ?, ?, NOW(), NOW()
+            )
+        ");
+            $stmt->execute([
+                $system_unit_id,
+                $doc,
+                $data_solicitacao,
+                $usuario_id,
+                $solicitante_nome
+            ]);
+            $requisicao_id = $pdo->lastInsertId();
+
+            // === Insere os itens da requisição ===
+            foreach ($itens as $item) {
+                $itemRequired = ['id_produto', 'produto', 'seq', 'quantidade'];
+                foreach ($itemRequired as $field) {
+                    if (!isset($item[$field]) || $item[$field] === '') {
+                        throw new Exception("O campo '$field' é obrigatório para cada item.");
+                    }
+                }
+
+                $stmt = $pdo->prepare("
+                INSERT INTO requisicao_compras_itens (
+                    requisicao_id, id_produto, produto, seq, preco, quantidade, quantidade_comprada, created_at, updated_at
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, NULL, NOW(), NOW()
+                )
+            ");
+                $stmt->execute([
+                    $requisicao_id,
+                    $item['id_produto'],
+                    $item['produto'],
+                    $item['seq'],
+                    isset($item['preco']) ? $item['preco'] : null,
+                    $item['quantidade']
+                ]);
+            }
+
+            // === Cria log da solicitação ===
+            $stmt = $pdo->prepare("
+            INSERT INTO requisicao_compras_log (
+                requisicao_id, status, observacao, usuario_id, created_at
+            ) VALUES (
+                ?, 1, 'Requisição criada pela loja.', ?, NOW()
+            )
+        ");
+            $stmt->execute([
+                $requisicao_id,
+                $usuario_id
+            ]);
+
+            $pdo->commit();
+
+            return [
+                'success' => true,
+                'message' => 'Requisição de compras criada com sucesso.',
+                'doc' => $doc,
+                'requisicao_id' => $requisicao_id
+            ];
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            return [
+                'success' => false,
+                'message' => 'Erro ao salvar requisição: ' . $e->getMessage()
+            ];
         }
     }
 

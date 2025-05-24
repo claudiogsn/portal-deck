@@ -41,43 +41,53 @@
         .form-control {
             margin-bottom: 10px;
         }
+
         table {
             margin-top: 20px;
         }
+
         th, td {
             text-align: left;
         }
+
         .modal-body {
             max-height: 500px;
             overflow-y: auto;
         }
-        .form-control {
-        display: block;
-        width: 100%;
-        height: 34px;
-        padding: 6px 12px;
-        font-size: 14px;
-        line-height: 1.42857143;
-        color: #555;
-        background-color: #fff;
-        background-image: none;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
-                box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
-        -webkit-transition: border-color ease-in-out .15s, -webkit-box-shadow ease-in-out .15s;
-            -o-transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
-                transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
-        }
-        .form-control:focus {
-        border-color: #66afe9;
-        outline: 0;
-        -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
-                box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
+
+        #item-quantity {
+            height: 34px !important;
+            font-size: 14px;
+            padding: 6px 12px;
+            line-height: 1.42857143;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
 
+        #item-total {
+            height: 34px;
+            font-size: 14px;
+        }
+
+        #preco-preview {
+            font-size: 12px;
+            color: #888;
+            margin-top: -6px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        #total-geral {
+            font-size: 16px;
+            margin-top: 10px;
+            text-align: right;
+            display: block;
+            font-weight: bold;
+            color: #333;
+        }
 
     </style>
+
 </head>
 <body class="theme-blue">
 
@@ -92,20 +102,33 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="header">
-                    <h2>Transferência de Itens</h2>
+                    <h2>Solicitação de Compras</h2>
                 </div>
                 <div class="body">
                     <form id="transferForm">
+                        <div class="row">
+                            <div id="pageTitle" class="col-md-5">
+                            </div>
+                            <div class="col-md-5">
+                                <label for="solicitante-nome">Solicitante</label>
+                                <input type="text" id="solicitante-nome" class="form-control" placeholder="Seu nome">
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-md-5">
                                 <label for="item-description">Produto</label>
                                 <input type="hidden" id="item-codigo" class="form-control" readonly>
                                 <input type="hidden" id="item-unit" class="form-control" readonly>
+                                <input type="hidden" id="item-preco" class="form-control" readonly>
                                 <input type="text" id="item-description" class="form-control" readonly placeholder="Clique para selecionar um produto" data-toggle="modal" data-target="#itemModal">
                             </div>
                             <div class="col-md-3">
                                 <label for="item-quantity">Quantidade</label>
-                                <input type="text" inputmode="numeric" id="item-quantity" class="form-control quantidade" placeholder="Digite a quantidade">
+                                <div class="input-group">
+                                    <input type="text" inputmode="numeric" id="item-quantity" class="form-control quantidade" placeholder="Digite a quantidade">
+                                </div>
+                                <small id="preco-preview" style="font-size: 12px; color: gray;">* R$ 0,00</small>
+                                <input type="text" id="item-total" class="form-control" placeholder="Total (R$)" readonly style="margin-top: 4px;">
                             </div>
                             <div class="col-md-1">
                                 <label for="add-item">&nbsp;</label>
@@ -126,14 +149,19 @@
             <table id="result-table" class="table table-bordered table-hover">
                 <thead>
                     <tr>
-                        <th>Cod.</th>
+                        <th style="display:none">Cod.</th>
                         <th>Descrição</th>
                         <th>Quant</th>
+                        <th>Preço</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
+            <div style="margin-top: 10px; text-align: right; font-weight: bold;">
+                <span id="total-geral">Total da Compra: R$ 0,00</span>
+            </div>
+
         </div>
     </div>
 </div>
@@ -164,8 +192,10 @@
                 <table id="item-table" class="table table-bordered table-hover">
                     <thead>
                         <tr>
-                            <th>Cod.</th>
+                            <th style="display:none">Cod.</th>
                             <th>Descrição</th>
+                            <th>Unidade</th>
+                            <th>Preço</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -197,7 +227,8 @@
 <!-- Adicionar Axios e SweetAlert -->
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -207,7 +238,7 @@
         'http://localhost/portal-deck/api/v1/index.php';
 
     let modeloNome = '';
-    let system_unit_id = []
+    let system_unit_id = '';
 
     function extractSystemUnitId() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -218,7 +249,49 @@
         }
         console.log('system_unit_id:', system_unit_id);
     }
-    async function loadItemsByTag(){
+        let todosItens = {}; // armazenará os itens por categoria
+
+        function renderTabelaModal(itens) {
+            const tbody = $('#item-table tbody');
+            tbody.empty();
+
+            Object.values(itens).flat().forEach(item => {
+                const preco = item.preco_custo ?? '-';
+                const linha = $(`
+            <tr>
+                <td style="display:none" >${item.codigo_produto}</td>
+                <td>${item.nome_produto}</td>
+                <td>${item.und_produto}</td>
+                <td>${preco}</td>
+                <td><button class="btn btn-success btn-xs selecionar-item" data-id="${item.id_produto}">Selecionar</button></td>
+            </tr>
+        `);
+
+                linha.find('.selecionar-item').on('click', () => {
+                    $('#item-codigo').val(item.codigo_produto);
+                    $('#item-unit').val(item.und_produto);
+                    $('#item-description').val(item.nome_produto);
+                    $('#item-preco').val(preco);
+                    $('#preco-preview').text(`* R$ ${parseFloat(preco).toFixed(2).replace('.', ',')}`);
+                    $('#item-total').val('');
+                    $('#itemModal').modal('hide');
+                });
+
+                tbody.append(linha);
+            });
+        }
+
+// Filtro dinâmico no input de busca
+        $('#item-search').on('keyup', function () {
+            const termo = $(this).val().toLowerCase();
+            $('#item-table tbody tr').each(function () {
+                const textoLinha = $(this).text().toLowerCase();
+                $(this).toggle(textoLinha.includes(termo));
+            });
+        });
+
+// Após receber os dados na loadItemsByTag
+        async function loadItemsByTag() {
             const urlParams = new URLSearchParams(window.location.search);
             const tag = urlParams.get('tag');
 
@@ -226,9 +299,6 @@
                 swal("Erro", "Tag não encontrada.", "error");
                 return;
             }
-
-            showLoader();
-
             try {
                 const response = await axios.post(baseUrl, {
                     method: 'getModelByTagCompras',
@@ -239,215 +309,313 @@
                     const { modelo, itens } = response.data;
                     modeloNome = modelo.nome;
                     $('#pageTitle').text(`Realizar Balanço - ${modelo.system_unit_name} - Modelo: ${modelo.nome}`);
-                    renderItensByCategory(itens);
+
+                    todosItens = itens;
+                    renderTabelaModal(todosItens);
                 } else {
                     swal("Erro", "Falha ao carregar itens: " + response.data.message, "error");
                 }
             } catch (error) {
                 console.error('Erro ao carregar itens:', error);
                 swal("Erro", "Erro ao carregar itens. Tente novamente.", "error");
-            } finally {
-                hideLoader();
             }
         }
 
     // Função para enviar os itens de transferência para o backend
-    async function sendTransferItems() {
-        const transferDate = $('#transfer-date').val();
-        const originUnit = $('#origin-unit').val();
-        const destinationUnit = $('#destination-unit').val();
-        const username = urlParams.get('username');
+        async function gerarPdfRequisicao({ unidade, solicitante, data, doc, itens }) {
+            const visualContent = document.createElement('div');
+            visualContent.classList.add('requisicao-preview');
+            visualContent.style.position = 'absolute';
+            visualContent.style.left = '-9999px';
+            visualContent.style.top = '0';
+            visualContent.style.width = '794px';
+            visualContent.style.minHeight = '1123px';
+            visualContent.style.backgroundColor = '#fff';
+            visualContent.style.padding = '20px';
+            visualContent.innerHTML = `
+    <style>
+      body { font-family: Arial, sans-serif; }
+      h1, h2 { margin: 0; padding: 0; }
+      h1 { font-size: 24px; font-weight: bold; }
+      h2 { font-size: 18px; margin-bottom: 20px; }
+      .header { display: flex; justify-content: space-between; align-items: center; }
+      .header img { max-height: 60px; }
+      hr { border: 1px solid black; margin: 20px 0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+      table, th, td { border: 1px solid black; }
+      th, td { padding: 8px; text-align: left; }
+      .signature-line { margin-top: 50px; text-align: center; font-size: 14px; }
+      .signature-line span { display: inline-block; margin-top: 10px; border-top: 1px solid black; width: 400px; }
+    </style>
+    <div class="header">
+      <div>
+        <h1>Portal Deck</h1>
+        <h2>Requisição de Compras</h2>
+      </div>
+      <div>
+        <img src="https://portal.vemprodeck.com.br/app/templates/theme5/images/deck.png" alt="Logo">
+      </div>
+    </div>
+    <hr>
+    <p><strong>Unidade:</strong> ${unidade}</p>
+    <p><strong>Solicitante:</strong> ${solicitante}</p>
+    <p><strong>Data:</strong> ${data}</p>
+    <p><strong>Documento:</strong> ${doc}</p>
+    <hr>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Produto</th>
+          <th>Quantidade</th>
+          <th>Preço</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itens.map((item, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${item.produto}</td>
+            <td>${item.quantidade}</td>
+            <td>R$ ${item.preco.toFixed(2).replace('.', ',')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="signature-line">
+      <span>Assinatura do Responsável</span>
+    </div>
+  `;
 
-         // Verificar se a data está preenchida
-         if (!transferDate) {
-            swal.fire('Erro', 'Selecione uma data válida para a transferência.', 'error');
-            return;
+            document.body.appendChild(visualContent);
+
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const pdfBlob = await html2pdf()
+                .from(visualContent)
+                .set({
+                    margin: 10,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                })
+                .outputPdf('blob');
+
+            document.body.removeChild(visualContent);
+
+            return new File([pdfBlob], `requisicao_${doc}.pdf`, { type: 'application/pdf' });
         }
 
-        // Verificar se as unidades de origem e destino foram selecionadas
-        if (!originUnit || !destinationUnit) {
-            swal.fire('Erro', 'Selecione a unidade de origem e destino.', 'error');
-            return;
-        }
 
-        if (originUnit == destinationUnit) {
-            swal.fire('Erro', 'A unidade de Origem não pode ser igual a unidade de destino', 'error');
-            return;
-        }
 
-        // Obter os itens da tabela
-        const items = [];
-        $('#result-table tbody tr').each(function(index, row) {
-            const codigo = $(row).find('td:eq(0)').text();
-            const quantidade = $(row).find('td:eq(2)').text();
+        async function sendTransferItems() {
+            const transferDate = new Date().toISOString().split('T')[0];
+            const solicitanteNome = $('#solicitante-nome').val();
 
-            if (codigo && quantidade) {
-                items.push({
-                    codigo: codigo,
-                    seq: index + 1,  // Sequência começa de 1
-                    quantidade: quantidade
-                });
+            if (!solicitanteNome) {
+                swal.fire('Erro', 'Informe o nome do solicitante.', 'error');
+                return;
             }
-        });
 
-        // Verificar se há itens a enviar
-        if (items.length === 0) {
-            swal.fire('Erro', 'Adicione ao menos um item para transferência.', 'error');
-            return;
-        }
+            const items = [];
+            $('#result-table tbody tr').each(function(index, row) {
+                const id_produto = $(row).data('id-produto');
+                const produto = $(row).find('td:eq(0)').text();
+                const quantidade = parseFloat($(row).find('td:eq(1)').text().replace(',', '.'));
+                const precoTexto = $(row).find('td:eq(2)').text().replace('R$', '').trim().replace(',', '.');
+                const preco = parseFloat(precoTexto);
 
-        // Solicitar confirmação antes de enviar
-        swal.fire({
-            title: 'Confirmar Transferência?',
-            text: 'Você está prestes a realizar a transferência de itens.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sim, Realizar',
-            cancelButtonText: 'Cancelar'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
+                if (id_produto && produto && !isNaN(quantidade)) {
+                    items.push({
+                        id_produto,
+                        produto,
+                        seq: index + 1,
+                        quantidade,
+                        preco
+                    });
+                }
+            });
+
+            if (items.length === 0) {
+                swal.fire('Erro', 'Adicione ao menos um item à requisição.', 'error');
+                return;
+            }
+
+            swal.fire({
+                title: 'Confirmar Requisição?',
+                text: 'Deseja realmente registrar esta requisição de compras?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, Enviar',
+                cancelButtonText: 'Cancelar'
+            }).then(async (result) => {
+                if (!result.isConfirmed) return;
 
                 swal.fire({
-                    title: 'Processando transferência...',
-                    text: 'Por favor, aguarde enquanto os dados estão sendo enviados.',
+                    title: 'Enviando...',
+                    text: 'Aguarde o processamento.',
                     allowOutsideClick: false,
-                    didOpen: () => {
-                        swal.showLoading();
-                    }
+                    didOpen: () => swal.showLoading()
                 });
-
 
                 try {
                     const response = await axios.post(baseUrl, {
-                        method: 'createTransferItems',
-                        token: token,
+                        method: 'saveComprasItems',
                         data: {
-                            system_unit_id: originUnit,
-                            system_unit_id_destino: destinationUnit,
-                            transfer_date: transferDate,
-                            itens: items,
-                            usuario_id: username
+                            system_unit_id: system_unit_id,
+                            data: transferDate,
+                            usuario_id: 5,
+                            solicitante_nome: solicitanteNome,
+                            itens: items
                         }
                     });
 
                     swal.close();
 
                     if (response.data.success) {
-                        const transferDoc = response.data.transfer_doc;
-                        const nomeUnidadeDestino = response.data.nome_unidade_destino;
-                        const nomeUnidadeOrigem = response.data.nome_unidade_origem;
-                        const dataHora = response.data.data_hora;
-                        const itens = response.data.itens;
-                        const usuario = response.data.usuario;
-
-                        // Exibir confirmação de sucesso antes de abrir a nova aba
                         swal.fire({
-                            title: 'Transferência realizada com sucesso!',
-                            text: `Número do documento: ${transferDoc}`,
+                            title: 'Requisição realizada com sucesso!',
+                            text: `Documento nº ${response.data.doc}`,
                             icon: 'success',
-                            confirmButtonText: 'OK'
-                        }).then(async () => {
-                            // Após o usuário clicar em "OK", abrir a nova aba
-                            const externalHtmlResponse = await fetch('./reports/transferencia.html');
-                            let htmlContent = await externalHtmlResponse.text();
+                            showDenyButton: true,
+                            showCancelButton: true,
+                            confirmButtonText: 'Salvar PDF',
+                            denyButtonText: 'Compartilhar PDF',
+                            cancelButtonText: 'Fechar'
+                        }).then(async (swalResult) => {
+                            const file = await gerarPdfRequisicao({
+                                unidade: $('#origin-unit option:selected').text(),
+                                solicitante: solicitanteNome,
+                                data: transferDate,
+                                doc: response.data.doc,
+                                itens: items
+                            });
 
-                            const itemRows = itens
-                                .map(
-                                    (item) =>
-                                        `<tr><td>${item.codigo}</td><td>${item.nome_produto}</td><td>${item.quantidade}</td></tr>`
-                                )
-                                .join('');
-
-                            htmlContent = htmlContent
-                                .replace('{{ESTABELECIMENTO_ORIGEM}}', nomeUnidadeOrigem)
-                                .replace('{{ESTABELECIMENTO_DESTINO}}', nomeUnidadeDestino)
-                                .replace('{{TIPO_MOV}}', 'Transferência')
-                                .replace('{{DOC_NUMBER}}', transferDoc)
-                                .replace('{{DATA}}', dataHora)
-                                .replace('{{USUARIO}}', usuario)
-                                .replace('{{DATA_ITENS}}', itemRows);
-
-                            const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-                            newWindow.document.open();
-                            newWindow.document.write(htmlContent);
-                            newWindow.document.close();
-
-                            $('#origin-unit').val('');
-                            $('#destination-unit').val('');
-                            $('#transfer-date').val('');
-                            $('#result-table tbody').empty();
+                            if (swalResult.isConfirmed) {
+                                const blobUrl = URL.createObjectURL(file);
+                                const a = document.createElement('a');
+                                a.href = blobUrl;
+                                a.download = file.name;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                URL.revokeObjectURL(blobUrl);
+                            } else if (swalResult.isDenied) {
+                                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                    await navigator.share({
+                                        title: `Requisição ${response.data.doc}`,
+                                        text: 'Segue a requisição de compras.',
+                                        files: [file]
+                                    });
+                                } else {
+                                    swal.fire('Aviso', 'Compartilhamento de arquivos não suportado no seu navegador.', 'warning');
+                                }
+                            }
                         });
+
+                        $('#origin-unit').val('');
+                        $('#transfer-date').val('');
+                        $('#solicitante-nome').val('');
+                        $('#result-table tbody').empty();
+                        $('#total-geral').text('Total da Compra: R$ 0,00');
                     } else {
                         swal.fire('Erro', response.data.message, 'error');
                     }
-                } catch (error) {
+                } catch (err) {
                     swal.close();
-                    console.error(error);
-                    swal.fire('Erro', 'Ocorreu um erro ao enviar os dados para o backend.', 'error');
+                    console.error(err);
+                    swal.fire('Erro', 'Falha ao enviar os dados para o servidor.', 'error');
                 }
-            }
-        });
+            });
+        }
 
-    }
 
-    // Configurar o evento para o botão de realizar a transferência
+
+        // Configurar o evento para o botão de realizar a transferência
     $('#transfer-button').click(function () {
         sendTransferItems();
     });
 
     // Configurar evento para abrir o modal de itens
-    $('#item-description').click(function () {
-        const unitId = $('#origin-unit').val();
-        loadItems(unitId);
-    });
+    $('#item-description').click(function () {});
 
-    $('#item-quantity').on('input', function () {
-        const unidade = $('#item-unit').val();
-        if (['KG', 'LT', 'L'].includes(unidade)) {
+        $('#item-quantity').on('input', function () {
+            const unidade = $('#item-unit').val();
+            const preco = parseFloat($('#item-preco').val().replace(',', '.')) || 0;
             let valor = $(this).val().replace(/[^\d]/g, '');
-            valor = (valor / 1000).toFixed(3);
-            $(this).val(valor.replace('.', ','));
-        } else {
-            // Permitir apenas números inteiros
-            $(this).val($(this).val().replace(/[^\d]/g, ''));
-        }
-    });
 
-    // Adicionar item à tabela de transferência
-    $('#add-item').click(function () {
-        const codigo = $('#item-codigo').val();
-        const descricao = $('#item-description').val();
-        const quantidade = $('#item-quantity').val();
+            let quantidade;
 
-        if (!descricao || !quantidade) {
-            swal.fire('Erro', 'Preencha todos os campos antes de adicionar.', 'error');
-            return;
-        }
+            if (['KG', 'LT', 'L'].includes(unidade)) {
+                // Mantém 3 casas decimais e exibe com vírgula
+                quantidade = (valor / 1000).toFixed(3);
+                $(this).val(quantidade.replace('.', ','));
+            } else {
+                // Inteiro
+                quantidade = parseInt(valor);
+                $(this).val(quantidade);
+            }
 
-        const row = `
-            <tr>
-                <td>${codigo}</td>
-                <td>${descricao}</td>
-                <td>${quantidade}</td>
-                <td><button class="btn btn-danger remove-item">X</button></td>
-            </tr>
-        `;
-
-        $('#result-table tbody').append(row);
-
-
-         // Limpar os campos após adicionar ao grid
-        $('#item-codigo').val('');
-        $('#item-description').val('');
-        $('#item-unit').val('');
-        $('#item-quantity').val('');
-
-
-        // Remover item
-        $('.remove-item').click(function () {
-            $(this).closest('tr').remove();
+            // Cálculo total usando ponto como separador decimal
+            const total = (quantidade * preco).toFixed(2);
+            $('#item-total').val(total.replace('.', ','));
         });
-    });
+
+
+        // Adicionar item à tabela de transferência
+        $('#add-item').click(function () {
+            const codigo = $('#item-codigo').val();
+            const descricao = $('#item-description').val();
+            const quantidade = $('#item-quantity').val();
+            const preco = $('#item-preco').val();
+            const total = $('#item-total').val();
+
+            if (!descricao || !quantidade || !total) {
+                swal.fire('Erro', 'Preencha todos os campos antes de adicionar.', 'error');
+                return;
+            }
+
+            const row = `
+                <tr data-id-produto="${codigo}">
+                    <td>${descricao}</td>
+                    <td>${quantidade}</td>
+                    <td>R$ ${total}</td>
+                    <td><button class="btn btn-danger remove-item">X</button></td>
+                </tr>
+            `;
+
+
+            $('#result-table tbody').append(row);
+
+            // Limpar campos
+            $('#item-codigo').val('');
+            $('#item-description').val('');
+            $('#item-unit').val('');
+            $('#item-quantity').val('');
+            $('#item-preco').val('');
+            $('#item-total').val('');
+            $('#preco-preview').text(`* R$ 0,00`);
+
+            // Recalcular totalizador
+            atualizarTotalizador();
+
+            // Remover item
+            $('.remove-item').click(function () {
+                $(this).closest('tr').remove();
+                atualizarTotalizador();
+            });
+        });
+
+        function atualizarTotalizador() {
+            let total = 0;
+            $('#result-table tbody tr').each(function () {
+                const valor = $(this).find('td:eq(3)').text().replace('R$', '').replace(',', '.');
+                total += parseFloat(valor) || 0;
+            });
+
+            $('#total-geral').text(`Total da Compra: R$ ${total.toFixed(2).replace('.', ',')}`);
+        }
+
         loadItemsByTag();
         extractSystemUnitId();
 });
