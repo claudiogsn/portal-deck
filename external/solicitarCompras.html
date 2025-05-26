@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solicitação de Compras</title>
-
-    <!-- Favicon-->
     <link rel="icon" href="bsb/favicon.ico" type="image/x-icon">
 
     <!-- Google Fonts -->
@@ -51,22 +49,16 @@
         }
 
         .modal-body {
-            max-height: 500px;
+            max-height: 80vh;
             overflow-y: auto;
         }
 
-        #item-quantity {
-            height: 34px !important;
-            font-size: 14px;
-            padding: 6px 12px;
-            line-height: 1.42857143;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        #item-total {
+        #item-quantity, #item-total {
             height: 34px;
             font-size: 14px;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
 
         #preco-preview {
@@ -80,7 +72,7 @@
         .total-label-container {
             display: flex;
             justify-content: flex-end;
-            padding-top: 10px; /* espaçamento superior */
+            padding-top: 10px;
             margin-right: 20px;
             margin-bottom: 10px;
         }
@@ -94,9 +86,33 @@
             font-weight: bold;
         }
 
+        @media (max-width: 768px) {
+            .form-control {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
 
+            .total-label-container {
+                justify-content: center;
+                margin-right: 0;
+            }
+
+            #total-geral {
+                font-size: 13px;
+                padding: 6px 12px;
+            }
+
+            .btn {
+                font-size: 13px;
+                padding: 6px 10px;
+            }
+
+            .modal-body {
+                height: 80vh;
+                overflow-y: auto;
+            }
+        }
     </style>
-
 </head>
 <body class="theme-blue">
 
@@ -199,15 +215,6 @@
                 </div>
                 <!-- Tabela de itens -->
                 <table id="item-table" class="table table-bordered table-hover">
-                    <thead>
-                        <tr>
-                            <th style="display:none">Cod.</th>
-                            <th>Descrição</th>
-                            <th>Unidade</th>
-                            <th>Preço</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
                     <tbody>
                         <!-- Dados carregados dinamicamente -->
                     </tbody>
@@ -270,29 +277,65 @@
             const tbody = $('#item-table tbody');
             tbody.empty();
 
+            // Agrupar por categoria
+            const agrupado = {};
             Object.values(itens).flat().forEach(item => {
-                const preco = item.preco_custo ?? '-';
-                const linha = $(`
-            <tr>
-                <td style="display:none" >${item.codigo_produto}</td>
-                <td>${item.nome_produto}</td>
-                <td>${item.und_produto}</td>
-                <td>${preco}</td>
-                <td><button class="btn btn-success btn-xs selecionar-item" data-id="${item.id_produto}">Selecionar</button></td>
+                const categoria = item.nome_categoria || 'Sem Categoria';
+                if (!agrupado[categoria]) agrupado[categoria] = [];
+                agrupado[categoria].push(item);
+            });
+
+            // Ordenar alfabeticamente dentro de cada categoria
+            Object.keys(agrupado).forEach(categoria => {
+                agrupado[categoria].sort((a, b) => a.nome_produto.localeCompare(b.nome_produto));
+            });
+
+            // Gerar DOM
+            Object.entries(agrupado).forEach(([categoria, itensCategoria], index) => {
+                const collapseId = `collapse-cat-${index}`;
+
+                const headerRow = $(`
+            <tr class="categoria-header" style="background-color: #f0f0f0; cursor: pointer; font-weight: bold;">
+                <td colspan="5">${categoria} <span style="float:right;">+</span></td>
             </tr>
         `);
 
-                linha.find('.selecionar-item').on('click', () => {
-                    $('#item-codigo').val(item.codigo_produto);
-                    $('#item-unit').val(item.und_produto);
-                    $('#item-description').val(item.nome_produto);
-                    $('#item-preco').val(preco);
-                    $('#preco-preview').text(`* R$ ${parseFloat(preco).toFixed(2).replace('.', ',')}`);
-                    $('#item-total').val('');
-                    $('#itemModal').modal('hide');
+                const rowsContainer = $(`<tbody class="categoria-itens" id="${collapseId}" style="display: none;"></tbody>`);
+
+                itensCategoria.forEach(item => {
+                    const preco = item.preco_custo ?? '-';
+                    const linha = $(`
+                <tr>
+                    <td style="display:none">${item.codigo_produto}</td>
+                    <td>${item.nome_produto}</td>
+                    <td>${item.und_produto}</td>
+                    <td>R$ ${parseFloat(preco).toFixed(2).replace('.', ',')}</td>
+                    <td><button class="btn btn-success btn-xs selecionar-item" data-id="${item.id_produto}">+</button></td>
+                </tr>
+            `);
+
+                    linha.find('.selecionar-item').on('click', () => {
+                        $('#item-codigo').val(item.codigo_produto);
+                        $('#item-unit').val(item.und_produto);
+                        $('#item-description').val(item.nome_produto);
+                        $('#item-preco').val(preco);
+                        $('#preco-preview').text(`* R$ ${parseFloat(preco).toFixed(2).replace('.', ',')}`);
+                        $('#item-total').val('');
+                        $('#itemModal').modal('hide');
+                    });
+
+                    rowsContainer.append(linha);
                 });
 
-                tbody.append(linha);
+                // Toggle de categoria
+                headerRow.on('click', function () {
+                    $(`#${collapseId}`).toggle();
+                    const indicador = $(this).find('span');
+                    indicador.text(indicador.text() === '+' ? '−' : '+');
+                });
+
+                tbody.append(headerRow);
+                tbody.append(rowsContainer);
             });
         }
 
