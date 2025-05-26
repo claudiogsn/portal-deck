@@ -1,95 +1,163 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Impressão da Requisição de Compras</title>
+    <meta charset="UTF-8">
+    <title>Requisição de Compras</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1, h2 {
-            margin: 0;
-            padding: 0;
-        }
-        h1 {
-            font-size: 24px;
-            font-weight: bold;
-        }
-        h2 {
-            font-size: 18px;
-            margin-bottom: 20px;
-        }
+        body { font-family: Arial, sans-serif; padding: 20px; }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
         }
         .header img {
             max-height: 60px;
         }
-        hr {
-            border: 1px solid black;
-            margin: 20px 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        .signature-line {
-            margin-top: 50px;
-            text-align: center;
-            font-size: 14px;
-        }
-        .signature-line span {
-            display: inline-block;
-            margin-top: 10px;
-            border-top: 1px solid black;
-            width: 400px;
-        }
+        h1, h2 { margin: 0; padding: 0; }
+        h1 { font-size: 24px; font-weight: bold; }
+        h2 { font-size: 18px; }
+        hr { border: 1px solid black; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        table, th, td { border: 1px solid black; }
+        th, td { padding: 8px; text-align: left; }
+        .signature-line { margin-top: 50px; text-align: center; font-size: 14px; }
+        .signature-line span { display: inline-block; margin-top: 10px; border-top: 1px solid black; width: 400px; }
     </style>
 </head>
 <body>
-<div class="header">
+
+<div id="conteudo-pdf"></div>
+
+<script>
+    const data = JSON.parse(localStorage.getItem('requisicaoPdfData'));
+    if (!data) {
+        document.body.innerHTML = "<p>Erro: Nenhum dado encontrado.</p>";
+        throw new Error('Dados da requisição não encontrados');
+    }
+
+    const { unidade, solicitante, data: dataRequisicao, doc, itens } = data;
+
+    async function getBase64ImageFromURL(url) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    const totalGeral = itens.reduce((acc, item) => acc + (item.preco), 0);
+    const formatarValor = (valor) => new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(valor);
+
+    async function gerarPdfBlob(logoBase64) {
+        const html = `
+  <div class="header">
     <div>
-        <h1>Portal Deck</h1>
-        <h2>Requisição de Compras</h2>
+      <h1>Portal Deck</h1>
+      <h2>Requisição de Compras</h2>
     </div>
     <div>
-        <img src="https://portal.vemprodeck.com.br/app/templates/theme5/images/deck.png" alt="Logo">
+      <img src="${logoBase64}" alt="Logo">
     </div>
-</div>
-<hr>
-<p><strong>Unidade:</strong> {{UNIDADE}}</p>
-<p><strong>Solicitante:</strong> {{SOLICITANTE}}</p>
-<p><strong>Data:</strong> {{DATA}}</p>
-<p><strong>Documento:</strong> {{DOC}}</p>
-<hr>
-<table>
+  </div>
+  <hr>
+  <p><strong>Unidade:</strong> ${unidade}</p>
+  <p><strong>Solicitante:</strong> ${solicitante}</p>
+  <p><strong>Data:</strong> ${dataRequisicao}</p>
+  <p><strong>Documento:</strong> ${doc}</p>
+  <hr>
+
+  <table>
     <thead>
-    <tr>
+      <tr>
         <th>#</th>
         <th>Produto</th>
         <th>Quantidade</th>
         <th>Preço</th>
-    </tr>
+      </tr>
     </thead>
     <tbody>
-    {{DATA_ITENS}}
+      ${itens.map((item, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${item.produto}</td>
+          <td>${item.quantidade}</td>
+          <td>${formatarValor(item.preco)}</td>
+        </tr>
+      `).join('')}
+      <tr>
+        <td colspan="3" style="text-align: right; font-weight: bold;">TOTAL</td>
+        <td style="font-weight: bold;">${formatarValor(totalGeral)}</td>
+      </tr>
     </tbody>
-</table>
-<div class="signature-line">
+  </table>
+
+  <div class="signature-line">
     <span>Assinatura do Responsável</span>
-</div>
+  </div>
+`;
+
+        const container = document.getElementById('conteudo-pdf');
+        container.innerHTML = html;
+
+        const arrayBuffer = await html2pdf()
+            .from(container)
+            .set({
+                margin: 10,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            })
+            .toPdf()
+            .output('arraybuffer');
+
+        return new File([arrayBuffer], `requisicao_${doc}.pdf`, { type: 'application/pdf' });
+    }
+
+    async function iniciarEscolha() {
+        const logoBase64 = await getBase64ImageFromURL('deck.png');
+        const file = await gerarPdfBlob(logoBase64);
+
+        Swal.fire({
+            title: 'O que deseja fazer?',
+            text: 'Escolha uma ação para o PDF gerado:',
+            icon: 'question',
+            showDenyButton: true,
+            confirmButtonText: '📥 Baixar PDF',
+            denyButtonText: '🔗 Compartilhar PDF'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const url = URL.createObjectURL(file);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } else if (result.isDenied) {
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: `Requisição ${doc}`,
+                        text: 'Segue a requisição de compras.',
+                        files: [file]
+                    });
+                } else {
+                    alert('Seu navegador não suporta compartilhamento de arquivos.');
+                }
+            }
+        });
+    }
+
+    setTimeout(iniciarEscolha, 500);
+</script>
 </body>
 </html>

@@ -77,14 +77,23 @@
             display: block;
         }
 
-        #total-geral {
-            font-size: 16px;
-            margin-top: 10px;
-            text-align: right;
-            display: block;
-            font-weight: bold;
-            color: #333;
+        .total-label-container {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 10px; /* espaçamento superior */
+            margin-right: 20px;
+            margin-bottom: 10px;
         }
+
+        #total-geral {
+            background-color: #1976d2;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
 
     </style>
 
@@ -103,12 +112,12 @@
             <div class="card">
                 <div class="header">
                     <h2>Solicitação de Compras</h2>
+                    <div id="pageTitleUnidade"></div>
+                    <div id="pageTitleModelo"></div>
                 </div>
                 <div class="body">
                     <form id="transferForm">
                         <div class="row">
-                            <div id="pageTitle" class="col-md-5">
-                            </div>
                             <div class="col-md-5">
                                 <label for="solicitante-nome">Solicitante</label>
                                 <input type="text" id="solicitante-nome" class="form-control" placeholder="Seu nome">
@@ -146,6 +155,9 @@
      <div class="card">
     <div class="row">
         <div class="col-md-12">
+            <div class="total-label-container">
+                <span id="total-geral">Total da Compra: R$ 0,00</span>
+            </div>
             <table id="result-table" class="table table-bordered table-hover">
                 <thead>
                     <tr>
@@ -158,9 +170,6 @@
                 </thead>
                 <tbody></tbody>
             </table>
-            <div style="margin-top: 10px; text-align: right; font-weight: bold;">
-                <span id="total-geral">Total da Compra: R$ 0,00</span>
-            </div>
 
         </div>
     </div>
@@ -237,7 +246,13 @@
         'https://portal.vemprodeck.com.br/api/v1/index.php' :
         'http://localhost/portal-deck/api/v1/index.php';
 
+        const baseUrlredirect = window.location.hostname !== 'localhost' ?
+            'https://portal.vemprodeck.com.br/external' :
+            'http://localhost/portal-deck/external';
+
+
     let modeloNome = '';
+    let SystemUnitName = '';
     let system_unit_id = '';
 
     function extractSystemUnitId() {
@@ -308,7 +323,9 @@
                 if (response.data && response.data.success) {
                     const { modelo, itens } = response.data;
                     modeloNome = modelo.nome;
-                    $('#pageTitle').text(`Realizar Balanço - ${modelo.system_unit_name} - Modelo: ${modelo.nome}`);
+                    SystemUnitName = modelo.system_unit_name;
+                    $('#pageTitleUnidade').text(`Unidade: ${SystemUnitName}`);
+                    $('#pageTitleModelo').text(`Modelo de Compra: ${modeloNome}`);
 
                     todosItens = itens;
                     renderTabelaModal(todosItens);
@@ -320,92 +337,6 @@
                 swal("Erro", "Erro ao carregar itens. Tente novamente.", "error");
             }
         }
-
-    // Função para enviar os itens de transferência para o backend
-        async function gerarPdfRequisicao({ unidade, solicitante, data, doc, itens }) {
-            const visualContent = document.createElement('div');
-            visualContent.classList.add('requisicao-preview');
-            visualContent.style.position = 'absolute';
-            visualContent.style.left = '-9999px';
-            visualContent.style.top = '0';
-            visualContent.style.width = '794px';
-            visualContent.style.minHeight = '1123px';
-            visualContent.style.backgroundColor = '#fff';
-            visualContent.style.padding = '20px';
-            visualContent.innerHTML = `
-    <style>
-      body { font-family: Arial, sans-serif; }
-      h1, h2 { margin: 0; padding: 0; }
-      h1 { font-size: 24px; font-weight: bold; }
-      h2 { font-size: 18px; margin-bottom: 20px; }
-      .header { display: flex; justify-content: space-between; align-items: center; }
-      .header img { max-height: 60px; }
-      hr { border: 1px solid black; margin: 20px 0; }
-      table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
-      table, th, td { border: 1px solid black; }
-      th, td { padding: 8px; text-align: left; }
-      .signature-line { margin-top: 50px; text-align: center; font-size: 14px; }
-      .signature-line span { display: inline-block; margin-top: 10px; border-top: 1px solid black; width: 400px; }
-    </style>
-    <div class="header">
-      <div>
-        <h1>Portal Deck</h1>
-        <h2>Requisição de Compras</h2>
-      </div>
-      <div>
-        <img src="https://portal.vemprodeck.com.br/app/templates/theme5/images/deck.png" alt="Logo">
-      </div>
-    </div>
-    <hr>
-    <p><strong>Unidade:</strong> ${unidade}</p>
-    <p><strong>Solicitante:</strong> ${solicitante}</p>
-    <p><strong>Data:</strong> ${data}</p>
-    <p><strong>Documento:</strong> ${doc}</p>
-    <hr>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Produto</th>
-          <th>Quantidade</th>
-          <th>Preço</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itens.map((item, i) => `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${item.produto}</td>
-            <td>${item.quantidade}</td>
-            <td>R$ ${item.preco.toFixed(2).replace('.', ',')}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-    <div class="signature-line">
-      <span>Assinatura do Responsável</span>
-    </div>
-  `;
-
-            document.body.appendChild(visualContent);
-
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            const pdfBlob = await html2pdf()
-                .from(visualContent)
-                .set({
-                    margin: 10,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                })
-                .outputPdf('blob');
-
-            document.body.removeChild(visualContent);
-
-            return new File([pdfBlob], `requisicao_${doc}.pdf`, { type: 'application/pdf' });
-        }
-
 
 
         async function sendTransferItems() {
@@ -477,47 +408,26 @@
                             title: 'Requisição realizada com sucesso!',
                             text: `Documento nº ${response.data.doc}`,
                             icon: 'success',
-                            showDenyButton: true,
-                            showCancelButton: true,
-                            confirmButtonText: 'Salvar PDF',
-                            denyButtonText: 'Compartilhar PDF',
-                            cancelButtonText: 'Fechar'
-                        }).then(async (swalResult) => {
-                            const file = await gerarPdfRequisicao({
-                                unidade: $('#origin-unit option:selected').text(),
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            const requisicaoPayload = {
+                                unidade: SystemUnitName,
                                 solicitante: solicitanteNome,
                                 data: transferDate,
                                 doc: response.data.doc,
                                 itens: items
-                            });
+                            };
 
-                            if (swalResult.isConfirmed) {
-                                const blobUrl = URL.createObjectURL(file);
-                                const a = document.createElement('a');
-                                a.href = blobUrl;
-                                a.download = file.name;
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
-                                URL.revokeObjectURL(blobUrl);
-                            } else if (swalResult.isDenied) {
-                                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                                    await navigator.share({
-                                        title: `Requisição ${response.data.doc}`,
-                                        text: 'Segue a requisição de compras.',
-                                        files: [file]
-                                    });
-                                } else {
-                                    swal.fire('Aviso', 'Compartilhamento de arquivos não suportado no seu navegador.', 'warning');
-                                }
-                            }
+                            localStorage.setItem('requisicaoPdfData', JSON.stringify(requisicaoPayload));
+                            window.open(`${baseUrlredirect}/reports/requisicao.html`, '_blank');
+
+                            // Limpa campos
+                            $('#origin-unit').val('');
+                            $('#transfer-date').val('');
+                            $('#solicitante-nome').val('');
+                            $('#result-table tbody').empty();
+                            $('#total-geral').text('Total da Compra: R$ 0,00');
                         });
-
-                        $('#origin-unit').val('');
-                        $('#transfer-date').val('');
-                        $('#solicitante-nome').val('');
-                        $('#result-table tbody').empty();
-                        $('#total-geral').text('Total da Compra: R$ 0,00');
                     } else {
                         swal.fire('Erro', response.data.message, 'error');
                     }
@@ -609,7 +519,7 @@
         function atualizarTotalizador() {
             let total = 0;
             $('#result-table tbody tr').each(function () {
-                const valor = $(this).find('td:eq(3)').text().replace('R$', '').replace(',', '.');
+                const valor = $(this).find('td:eq(2)').text().replace('R$', '').replace(',', '.');
                 total += parseFloat(valor) || 0;
             });
 
