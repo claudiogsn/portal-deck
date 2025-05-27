@@ -6,3 +6,5 @@ app/config/sample.ini
 
 # Ignorar todos os arquivos .ini
 *.ini
+
+/logs

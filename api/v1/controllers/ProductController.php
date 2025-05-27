@@ -3,6 +3,8 @@
 date_default_timezone_set('America/Rio_Branco');
 
 require_once __DIR__ . '/../database/db.php'; // Ajustando o caminho para o arquivo db.php
+require_once __DIR__ . '/../database/db-permission.php'; // Ajustando o caminho para o arquivo db.php
+
 
 class ProductController {
 
@@ -62,8 +64,6 @@ class ProductController {
             return array('success' => false, 'message' => 'Erro ao criar produto: ' . $e->getMessage());
         }
     }
-
-
 
     public static function updateProduct($codigo, $data, $system_unit_id) {
         global $pdo;
@@ -176,7 +176,6 @@ class ProductController {
             return ['success' => false, 'message' => 'Erro ao listar insumos: ' . $e->getMessage()];
         }
     }
-
 
     public static function updateStockBalance($system_unit_id, $codigo, $saldo, $documento) {
         global $pdo;
@@ -346,6 +345,132 @@ class ProductController {
         }
     }
 
+    public static function importarProdutosPorLoja($system_unit_id, $produtos, $usuario_id): array
+    {
+        global $pdo;
+
+        try {
+            error_log("### Início da função importarProdutosPorLoja ###");
+
+            if (empty($system_unit_id) || empty($usuario_id) || !is_array($produtos)) {
+                throw new Exception('Parâmetros inválidos.');
+            }
+
+            error_log("Parâmetros recebidos - system_unit_id: $system_unit_id, usuario_id: $usuario_id, produtos: " . count($produtos));
+
+            // Inicia a transação
+            $pdo->beginTransaction();
+            error_log("Transação iniciada com sucesso.");
+
+            // Limpa as tabelas da unidade
+            $stmt1 = $pdo->prepare("DELETE FROM products WHERE system_unit_id = ?");
+            $stmt2 = $pdo->prepare("DELETE FROM categorias WHERE system_unit_id = ?");
+            if (!$stmt1 || !$stmt2) {
+                throw new Exception('Erro ao preparar DELETE.');
+            }
+
+            $stmt1->execute([$system_unit_id]);
+            $stmt2->execute([$system_unit_id]);
+
+            error_log("Tabelas limpas e AUTO_INCREMENT resetado.");
+
+            // Preparação dos inserts
+            $stmtInsertCategoria = $pdo->prepare("
+            INSERT INTO categorias (system_unit_id, codigo, nome)
+            VALUES (:system_unit_id, :codigo, :nome)
+        ");
+
+            $stmtInsertProduto = $pdo->prepare("
+            INSERT INTO products (system_unit_id, codigo, nome, und, preco_custo, categoria,insumo)
+            VALUES (:system_unit_id, :codigo, :nome, :und, :preco_custo, :categoria_id, :insumo)
+        ");
+
+            if (!$stmtInsertCategoria || !$stmtInsertProduto) {
+                throw new Exception('Erro ao preparar INSERTs.');
+            }
+
+            $mapCategorias = [];
+            $codCategoriaAtual = 1;
+            $produtosImportados = 0;
+
+            foreach ($produtos as $produto) {
+                if (!isset($produto['categoria_nome'], $produto['codigo'], $produto['nome'], $produto['und'], $produto['preco_custo'])) {
+                    throw new Exception("Produto malformado: " . json_encode($produto));
+                }
+
+                $nomeCategoria = strtoupper(trim($produto['categoria_nome']));
+                if (in_array($nomeCategoria, ['DESATIVADOS', 'INTEGRADOR PADRAO'])) {
+                    continue;
+                }
+
+                if (!isset($mapCategorias[$nomeCategoria])) {
+                    $stmtInsertCategoria->execute([
+                        ':system_unit_id' => $system_unit_id,
+                        ':codigo' => $codCategoriaAtual,
+                        ':nome' => $nomeCategoria
+                    ]);
+                    $categoria_id = $pdo->lastInsertId();
+                    $mapCategorias[$nomeCategoria] = $categoria_id;
+                    $codCategoriaAtual++;
+                    error_log("Categoria inserida: $nomeCategoria (ID: $categoria_id)");
+                } else {
+                    $categoria_id = $mapCategorias[$nomeCategoria];
+                }
+
+                // Sanitização
+                $codigo = $produto['codigo'];
+                $nome = mb_substr($produto['nome'], 0, 50);
+                $und = $produto['und'];
+                $preco_custo = str_replace(',', '.', $produto['preco_custo']);
+
+                try {
+                    $stmtInsertProduto->execute([
+                        ':system_unit_id' => $system_unit_id,
+                        ':codigo' => $codigo,
+                        ':nome' => $nome,
+                        ':und' => $und,
+                        ':preco_custo' => $preco_custo,
+                        ':categoria_id' => $categoria_id,
+                        ':insumo' => 1
+
+                    ]);
+                    $produtosImportados++;
+                } catch (Exception $e) {
+                    error_log("Erro ao inserir produto (codigo: $codigo): " . $e->getMessage());
+                    throw $e;
+                }
+            }
+
+            $pdo->commit();
+            error_log("Transação commitada com sucesso.");
+            error_log("### Fim da função importarProdutosPorLoja ###");
+
+            return [
+                'status' => 'success',
+                'message' => 'Importação concluída com sucesso.',
+                'categorias_importadas' => count($mapCategorias),
+                'produtos_importados' => $produtosImportados
+            ];
+        } catch (Exception $e) {
+            try {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                    error_log("Rollback executado com sucesso.");
+                } else {
+                    error_log("Rollback não necessário: nenhuma transação ativa.");
+                }
+            } catch (Exception $rollbackError) {
+                error_log("Erro ao tentar rollback: " . $rollbackError->getMessage());
+            }
+
+            error_log("Erro capturado: " . $e->getMessage());
+
+            return [
+                'status' => 'error',
+                'message' => 'Erro na importação: ' . $e->getMessage()
+            ];
+        }
+    }
 
 
 
