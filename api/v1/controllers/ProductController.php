@@ -358,11 +358,9 @@ class ProductController {
 
             error_log("Parâmetros recebidos - system_unit_id: $system_unit_id, usuario_id: $usuario_id, produtos: " . count($produtos));
 
-            // Inicia a transação
             $pdo->beginTransaction();
             error_log("Transação iniciada com sucesso.");
 
-            // Limpa as tabelas da unidade
             $stmt1 = $pdo->prepare("DELETE FROM products WHERE system_unit_id = ?");
             $stmt2 = $pdo->prepare("DELETE FROM categorias WHERE system_unit_id = ?");
             if (!$stmt1 || !$stmt2) {
@@ -372,17 +370,16 @@ class ProductController {
             $stmt1->execute([$system_unit_id]);
             $stmt2->execute([$system_unit_id]);
 
-            error_log("Tabelas limpas e AUTO_INCREMENT resetado.");
+            error_log("Tabelas limpas.");
 
-            // Preparação dos inserts
             $stmtInsertCategoria = $pdo->prepare("
             INSERT INTO categorias (system_unit_id, codigo, nome)
             VALUES (:system_unit_id, :codigo, :nome)
         ");
 
             $stmtInsertProduto = $pdo->prepare("
-            INSERT INTO products (system_unit_id, codigo, nome, und, preco_custo, categoria,insumo)
-            VALUES (:system_unit_id, :codigo, :nome, :und, :preco_custo, :categoria_id, :insumo)
+            INSERT INTO products (system_unit_id, codigo, nome, und, preco_custo, categoria, insumo)
+            VALUES (:system_unit_id, :codigo, :nome, :und, :preco_custo, :categoria_codigo, :insumo)
         ");
 
             if (!$stmtInsertCategoria || !$stmtInsertProduto) {
@@ -409,15 +406,17 @@ class ProductController {
                         ':codigo' => $codCategoriaAtual,
                         ':nome' => $nomeCategoria
                     ]);
-                    $categoria_id = $pdo->lastInsertId();
-                    $mapCategorias[$nomeCategoria] = $categoria_id;
+
+                    $mapCategorias[$nomeCategoria] = [
+                        'id' => $pdo->lastInsertId(),
+                        'codigo' => $codCategoriaAtual
+                    ];
+                    error_log("Categoria inserida: $nomeCategoria (COD: $codCategoriaAtual)");
                     $codCategoriaAtual++;
-                    error_log("Categoria inserida: $nomeCategoria (ID: $categoria_id)");
-                } else {
-                    $categoria_id = $mapCategorias[$nomeCategoria];
                 }
 
-                // Sanitização
+                $categoria_codigo = $mapCategorias[$nomeCategoria]['codigo'];
+
                 $codigo = $produto['codigo'];
                 $nome = mb_substr($produto['nome'], 0, 50);
                 $und = $produto['und'];
@@ -430,9 +429,8 @@ class ProductController {
                         ':nome' => $nome,
                         ':und' => $und,
                         ':preco_custo' => $preco_custo,
-                        ':categoria_id' => $categoria_id,
+                        ':categoria_codigo' => $categoria_codigo,
                         ':insumo' => 1
-
                     ]);
                     $produtosImportados++;
                 } catch (Exception $e) {
