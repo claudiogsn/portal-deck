@@ -100,6 +100,6 @@ class MudarFilial extends \Adianti\Control\TWindow
 
         new TMessage('info', "Modificado para Unidade $IDUnidade - $NomeUnidade");
 
-        AdiantiCoreApplication::gotoPage('WelcomeView');
+        TApplication::loadPage(AdiantiCoreApplication::getCallback());
     }
 }
