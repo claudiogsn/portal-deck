@@ -77,7 +77,7 @@ if (isset($_GET['tag'])) {
     <body class="theme-red">
 
         <div class="container error-container">
-            <img class="logo" src="https://portal.vemprodeck.com.br/app/templates/theme5/images/deck.png" alt="MRK Soluções Logo" width="200">
+            <img class="logo" src="https://portal.vemprodeck.com.br/app/templates/theme5/images/deck.png" alt="Deck Logo" width="200">
 
             <div class="error-code">403</div>
             <div class="error-message">Acesso Negado</div>
