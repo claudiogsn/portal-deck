@@ -82,17 +82,17 @@
         <div class="body">
           <div class="row">
             <div class="col-md-2">
-              <label for="modelName">Nome do Modelo:</label>
-              <input type="text" id="modelName" class="form-control" autocomplete="off" oninput="generateTag()">
+              <label for="modelNameView">Nome do Modelo:</label>
+              <p id="modelNameView" class="form-control-static">---</p>
             </div>
             <div class="col-md-2">
-              <label for="modelTag">Tag:</label>
-              <input type="text" id="modelTag" class="form-control" autocomplete="off" readonly>
+              <label for="modelTagView">Tag:</label>
+              <p id="modelTagView" class="form-control-static">---</p>
               <span id="tagValidationMessage" style="color: red; display: none;">Tag já existe. Escolha outro nome.</span>
             </div>
             <div class="col-md-5">
-              <label for="modelUrl">URL:</label>
-              <input type="text" id="modelUrl" class="form-control" readonly>
+              <label for="modelUrlView">URL:</label>
+              <p id="modelUrlView" class="form-control-static" style="word-break: break-all;">---</p>
             </div>
             <div class="col-md-3">
               <label>&nbsp;</label>
@@ -242,15 +242,14 @@
               const modelo = response.data.modelo;
               const itens = response.data.itens;
 
-              $('#modelName').replaceWith(`<label class="form-control">${modelo.nome}</label>`);
-              $('#modelTag').replaceWith(`<label class="form-control">${modelo.tag}</label>`);
-              $('#modelUrl').replaceWith(`<label class="form-control">${baseUrlRedirect}/balanco/${modelo.tag}</label>`);
+              // Atualiza os elementos somente-leitura
+              $('#modelNameView').text(modelo.nome);
+              $('#modelTagView').text(modelo.tag);
+              $('#modelUrlView').text(`${baseUrlRedirect}/balanco/${modelo.tag}`);
               $('#finalizarLancamento').text('Editar Modelo');
 
               modelTag = modelo.tag;
               modelName = modelo.nome;
-
-
 
               // Popular grid
               for (const categoria in itens) {
@@ -438,9 +437,8 @@
           const modelName = $('#modelName').val().trim();
           const modelTag = `${unitId}-${modelName.toLowerCase().replace(/\s+/g, '-')}`;
           const modelUrl = `${baseUrlRedirect}/balanco/${modelTag}`;
-          $('#modelTag').val(modelTag);
-          $('#modelUrl').val(modelUrl);
-
+          $('#modelTagView').text(modelTag);
+          $('#modelUrlView').text(modelUrl);
           const isValid = await validateTag(modelTag);
           if (!isValid) {
             $('#tagValidationMessage').show();
@@ -452,7 +450,7 @@
         };
 
         $('#btnCopyUrl').click(function () {
-          const url = $('#modelUrl').val();
+          const url = $('#modelUrlView').text();
           navigator.clipboard.writeText(url).then(() => {
             alert('URL copiada para a área de transferência');
           }).catch(err => {
@@ -520,9 +518,9 @@
               Swal.fire('Sucesso!', 'Lançamento finalizado com sucesso!', 'success').then(() => {
                 // Resetar
                 $('#balancoTable tbody').empty();
-                $('#modelName').val('');
-                $('#modelTag').val('');
-                $('#modelUrl').val('');
+                $('#modelNameView').text('');
+                $('#modelTagView').text('');
+                $('#modelUrlView').text('');
                 productsInBalance = [];
                 $('#finalizarLancamento').prop('disabled', true);
 
