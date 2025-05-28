@@ -27,7 +27,7 @@ class TApplication extends AdiantiCoreApplication
                 if (SystemPermission::checkPermission($class, $method))
                 {
                     parent::run($debug);
-                    if ($class !== 'MudarFilial') {
+                    if ($class !== 'MudarFilial' && $class !== 'LoginForm' && $class !== 'SearchInputBox' && $class !== 'NotificationList' && $class !== 'MessageList'){
                         TSession::setValue('last_class', $class);
                         error_log("Last class set to: $class", 0);
                     }
