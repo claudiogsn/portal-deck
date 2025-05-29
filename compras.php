@@ -141,15 +141,54 @@ if (isset($_GET['tag'])) {
     <!-- Carrega a URL dentro do iframe -->
     <iframe src="<?php echo htmlspecialchars($url); ?>"></iframe>
 </body>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+    let deferredPrompt = null;
+
+    // Detectar Android (via beforeinstallprompt)
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); // Evita o banner automático
+        deferredPrompt = e;
+
+        Swal.fire({
+            title: 'Instale o app!',
+            text: 'Você gostaria de adicionar este aplicativo à sua tela inicial?',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'Adicionar à Tela',
+            cancelButtonText: 'Agora não'
+        }).then((result) => {
+            if (result.isConfirmed && deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(choiceResult => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Usuário aceitou instalar o PWA');
+                    } else {
+                        console.log('Usuário recusou o PWA');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+    });
+
+    // Detectar iOS
     document.addEventListener("DOMContentLoaded", function () {
         const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
         const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
 
         if (isIOS && !isInStandaloneMode) {
-            alert("Para instalar este app, toque em 'Compartilhar' e depois em 'Adicionar à Tela de Início'.");
+            Swal.fire({
+                title: 'Instale o app!',
+                html: "No iPhone, toque em <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.",
+                icon: 'info',
+                confirmButtonText: 'Entendi'
+            });
         }
     });
 </script>
+
 
 </html>
