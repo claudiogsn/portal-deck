@@ -111,12 +111,13 @@ if (isset($_GET['tag'])) {
 
 <!DOCTYPE html>
 <html lang="pt-BR">
-<<link rel="manifest" href="manifest-compras.json">
-<link rel="apple-touch-icon" href="/app/images/compras/icon-192.png">
+<link rel="manifest" href="https://portal.vemprodeck.com.br/manifest-compras.json">
+<link rel="apple-touch-icon" href="https://portal.vemprodeck.com.br/app/images/compras/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Compras Deck">
 <meta name="theme-color" content="#ff9800">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Realizar Requisição Compras</title>
