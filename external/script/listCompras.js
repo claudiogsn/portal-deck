@@ -233,7 +233,16 @@ $(document).ready(function () {
 
     $('#btnExportarModal').click(function () {
         if (currentItems.length > 0) {
-            exportToExcel(currentItems, $('#balancoModal').data('doc'));
+            const itensFiltrados = currentItems.map(item => ({
+                seq: item.seq,
+                codigo: item.codigo,
+                produto: item.produto,
+                quantidade: item.quantidade,
+                preco: item.preco != null ? item.preco.toFixed(2) : '-'
+            }));
+
+            console.log('Exportando itens do modal:', itensFiltrados);
+            exportToExcel(itensFiltrados, $('#balancoModal').data('doc'));
             Swal.fire("Sucesso", "Requisição exportada com sucesso!", "success");
         } else {
             Swal.fire("Erro", "Nenhum item para exportar.", "error");

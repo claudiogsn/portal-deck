@@ -975,17 +975,16 @@ class ModeloBalancoController
             $stmtItens = $pdo->prepare("
             SELECT
                 i.id,
-                i.produto,
                 i.seq,
+                i.id_produto as codigo,
+                i.produto,
                 i.preco,
                 i.quantidade,
                 i.quantidade_comprada,
-                i.id_produto,
                 i.created_at,
-                i.updated_at,
-                p.nome AS nome_produto
+                i.updated_at
             FROM requisicao_compras_itens i
-            LEFT JOIN products p ON p.id = i.id_produto AND p.system_unit_id = i.system_unit_id
+            LEFT JOIN products p ON p.codigo = i.id_produto AND p.system_unit_id = i.system_unit_id
             WHERE i.requisicao_id = :requisicao_id AND i.system_unit_id = :system_unit_id
             ORDER BY i.seq ASC
         ");
