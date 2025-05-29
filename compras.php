@@ -111,12 +111,12 @@ if (isset($_GET['tag'])) {
 
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>      <link rel="manifest" href="manifest-compras.json">
-    <!-- Tell the browser to be responsive to screen width -->
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
-    <link rel="icon" href="favicon.ico" type="image/x-icon" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<<link rel="manifest" href="manifest-compras.json">
+<link rel="apple-touch-icon" href="/app/images/compras/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Compras Deck">
+<meta name="theme-color" content="#ff9800">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Realizar Requisição Compras</title>
@@ -139,4 +139,15 @@ if (isset($_GET['tag'])) {
     <!-- Carrega a URL dentro do iframe -->
     <iframe src="<?php echo htmlspecialchars($url); ?>"></iframe>
 </body>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
+        const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
+
+        if (isIOS && !isInStandaloneMode) {
+            alert("Para instalar este app, toque em 'Compartilhar' e depois em 'Adicionar à Tela de Início'.");
+        }
+    });
+</script>
+
 </html>
