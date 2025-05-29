@@ -111,6 +111,7 @@ if (isset($_GET['tag'])) {
 
 <!DOCTYPE html>
 <html lang="pt-BR">
+<link rel="manifest" href="https://portal.vemprodeck.com.br/manifest-loader.php?tag=<?php echo urlencode($_GET['tag'] ?? ''); ?>">
 <link rel="manifest" href="https://portal.vemprodeck.com.br/manifest-compras.json">
 <link rel="apple-touch-icon" href="https://portal.vemprodeck.com.br/app/images/compras/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
