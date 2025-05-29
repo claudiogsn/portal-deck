@@ -4,16 +4,19 @@ date_default_timezone_set('America/Rio_Branco');
 require_once __DIR__ . '/../database/db.php'; // Ajustando o caminho para o arquivo db.php
 require_once __DIR__ . '/../database/db-permission.php'; // Ajustando o caminho para o arquivo db.php
 
-class ModeloBalancoController {
+class ModeloBalancoController
+{
 
-    private static function sendResponse($success, $message, $data = [], $httpCode = 200) {
+    private static function sendResponse($success, $message, $data = [], $httpCode = 200)
+    {
         http_response_code($httpCode);
         echo json_encode(array_merge(['success' => $success, 'message' => $message], $data));
         exit;
     }
 
     // Cria um novo modelo de balanço junto com seus itens
-    public static function createModelo($data) {
+    public static function createModelo($data)
+    {
         global $pdo;
 
         try {
@@ -157,7 +160,8 @@ class ModeloBalancoController {
     }
 
     // Listar todos os modelos de balanço
-    public static function listModelos($ativo = null) {
+    public static function listModelos($ativo = null)
+    {
         global $pdo;
 
         try {
@@ -181,7 +185,8 @@ class ModeloBalancoController {
     }
 
     // Listar itens de um modelo de balanço
-    public static function listItensByModelo($modelo_id, $system_unit_id) {
+    public static function listItensByModelo($modelo_id, $system_unit_id)
+    {
         global $pdo;
 
         try {
@@ -209,7 +214,8 @@ class ModeloBalancoController {
     }
 
     // Atualizar um modelo de balanço
-    public static function updateModelo($id, $data) {
+    public static function updateModelo($id, $data)
+    {
         global $pdo;
 
         try {
@@ -248,7 +254,8 @@ class ModeloBalancoController {
     }
 
     // Deletar modelo de balanço
-    public static function deleteModelo($id) {
+    public static function deleteModelo($id)
+    {
         global $pdo;
 
         try {
@@ -267,7 +274,8 @@ class ModeloBalancoController {
     }
 
     // Deletar item de um modelo de balanço
-    public static function deleteItemFromModelo($modelo_id, $produto_id) {
+    public static function deleteItemFromModelo($modelo_id, $produto_id)
+    {
         global $pdo;
 
         try {
@@ -285,7 +293,8 @@ class ModeloBalancoController {
         }
     }
 
-    public static function validateTagExists($tag) {
+    public static function validateTagExists($tag)
+    {
         global $pdo;
 
         try {
@@ -308,7 +317,8 @@ class ModeloBalancoController {
         }
     }
 
-    public static function getModelByTag($tag) {
+    public static function getModelByTag($tag)
+    {
         global $pdo;
         global $pdop;
 
@@ -392,7 +402,8 @@ class ModeloBalancoController {
         }
     }
 
-    public static function listModelosWithProducts($system_unit_id) {
+    public static function listModelosWithProducts($system_unit_id)
+    {
         global $pdo;
         global $pdop;
 
@@ -456,16 +467,16 @@ class ModeloBalancoController {
         }
     }
 
-
-    public static function toggleModeloStatus($system_unit_id, $tag, $status) {
+    public static function toggleModeloStatus($system_unit_id, $tag, $status)
+    {
         global $pdo;
-    
+
         try {
             // Validar o status recebido (deve ser 0 ou 1)
             if (!in_array($status, [0, 1])) {
                 self::sendResponse(false, "O valor de status deve ser 0 (inativo) ou 1 (ativo).", [], 400); // 400 Bad Request
             }
-    
+
             // Atualizar o status do modelo de balanço com base no system_unit_id e tag
             $stmt = $pdo->prepare("
                 UPDATE modelos_balanco
@@ -476,13 +487,13 @@ class ModeloBalancoController {
             $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
             $stmt->bindParam(':tag', $tag, PDO::PARAM_STR);
             $stmt->execute();
-    
+
             if ($stmt->rowCount() > 0) {
                 self::sendResponse(true, 'success', [], 200); // 200 OK
             } else {
                 self::sendResponse(false, 'Nenhum modelo encontrado com a tag e system_unit_id fornecidos.', [], 404); // 404 Not Found
             }
-    
+
         } catch (Exception $e) {
             self::sendResponse(false, 'Erro ao atualizar status do modelo: ' . $e->getMessage(), [], 500);
         }
@@ -490,7 +501,8 @@ class ModeloBalancoController {
 
     //==========================Compras============================================
 
-    public static function createModeloCompras($data) {
+    public static function createModeloCompras($data)
+    {
         global $pdo;
 
         try {
@@ -558,7 +570,8 @@ class ModeloBalancoController {
         }
     }
 
-    public static function toggleModeloStatusCompras($system_unit_id, $tag, $status) {
+    public static function toggleModeloStatusCompras($system_unit_id, $tag, $status)
+    {
         global $pdo;
 
         try {
@@ -590,7 +603,8 @@ class ModeloBalancoController {
     }
 
 
-    public static function listItensByModeloCompras($modelo_id, $system_unit_id) {
+    public static function listItensByModeloCompras($modelo_id, $system_unit_id)
+    {
         global $pdo;
 
         try {
@@ -617,7 +631,8 @@ class ModeloBalancoController {
         }
     }
 
-    public static function validateTagExistsCompras($tag) {
+    public static function validateTagExistsCompras($tag)
+    {
         global $pdo;
 
         try {
@@ -640,7 +655,8 @@ class ModeloBalancoController {
         }
     }
 
-    public static function getModelByTagCompras($tag) {
+    public static function getModelByTagCompras($tag)
+    {
         global $pdo;
         global $pdop;
 
@@ -724,7 +740,8 @@ class ModeloBalancoController {
         }
     }
 
-    public static function listModelosWithProductsCompras($system_unit_id) {
+    public static function listModelosWithProductsCompras($system_unit_id)
+    {
         global $pdo;
         global $pdop;
 
@@ -863,5 +880,151 @@ class ModeloBalancoController {
         }
     }
 
+    public static function listPurchaseRequests($system_unit_id, $data_inicial = null, $data_final = null)
+    {
+        global $pdo;
+
+        try {
+            // Validação das datas
+            if (!empty($data_inicial) && !empty($data_final) && $data_inicial > $data_final) {
+                http_response_code(400);
+                return ['success' => false, 'message' => 'A data inicial não pode ser maior que a data final.'];
+            }
+
+            // Base da query com JOIN no status
+            $query = "
+        SELECT
+            rc.id,
+            rc.status,
+            rs.descricao AS status_descricao,
+            rc.system_unit_id,
+            rc.doc,
+            rc.data,
+            rc.usuario_id,
+            rc.created_at,
+            rc.updated_at,
+            rc.solicitante_nome
+        FROM requisicao_compras rc
+        INNER JOIN requisicao_status rs ON rs.id = rc.status
+        WHERE rc.system_unit_id = :system_unit_id";
+
+            // Filtros de data
+            if (!empty($data_inicial) && !empty($data_final)) {
+                $query .= " AND rc.data BETWEEN :data_inicial AND :data_final";
+            } elseif (!empty($data_inicial)) {
+                $query .= " AND rc.data >= :data_inicial";
+            } elseif (!empty($data_final)) {
+                $query .= " AND rc.data <= :data_final";
+            }
+
+            $query .= " ORDER BY rc.data DESC";
+
+            $stmt = $pdo->prepare($query);
+            $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
+
+            if (!empty($data_inicial)) {
+                $stmt->bindParam(':data_inicial', $data_inicial);
+            }
+            if (!empty($data_final)) {
+                $stmt->bindParam(':data_final', $data_final);
+            }
+
+            $stmt->execute();
+            $requisicoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'requisicoes' => $requisicoes];
+        } catch (Exception $e) {
+            http_response_code(500);
+            return ['success' => false, 'message' => 'Erro ao listar requisições: ' . $e->getMessage()];
+        }
+    }
+
+    public static function getPurchaseRequestByDoc($system_unit_id, $doc)
+    {
+        global $pdo;
+
+        try {
+            // 1. Buscar o cabeçalho da requisição com descrição do status
+            $stmtHeader = $pdo->prepare("
+            SELECT
+                rc.*,
+                rs.descricao AS status_descricao
+            FROM requisicao_compras rc
+            LEFT JOIN requisicao_status rs ON rs.id = rc.status
+            WHERE rc.system_unit_id = :system_unit_id AND rc.doc = :doc
+            LIMIT 1
+        ");
+            $stmtHeader->execute([
+                ':system_unit_id' => $system_unit_id,
+                ':doc' => $doc
+            ]);
+
+            $requisicao = $stmtHeader->fetch(PDO::FETCH_ASSOC);
+
+            if (!$requisicao) {
+                http_response_code(404);
+                return ['success' => false, 'message' => 'Requisição não encontrada.'];
+            }
+
+            $requisicao_id = $requisicao['id'];
+
+            // 2. Buscar os itens da requisição com nome do produto
+            $stmtItens = $pdo->prepare("
+            SELECT
+                i.id,
+                i.produto,
+                i.seq,
+                i.preco,
+                i.quantidade,
+                i.quantidade_comprada,
+                i.id_produto,
+                i.created_at,
+                i.updated_at,
+                p.nome AS nome_produto
+            FROM requisicao_compras_itens i
+            LEFT JOIN products p ON p.id = i.id_produto AND p.system_unit_id = i.system_unit_id
+            WHERE i.requisicao_id = :requisicao_id AND i.system_unit_id = :system_unit_id
+            ORDER BY i.seq ASC
+        ");
+            $stmtItens->execute([
+                ':requisicao_id' => $requisicao_id,
+                ':system_unit_id' => $system_unit_id
+            ]);
+            $itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Buscar o histórico de logs com descrição do status
+            $stmtLogs = $pdo->prepare("
+            SELECT
+                l.id,
+                l.status,
+                rs.descricao AS status_descricao,
+                l.observacao,
+                l.usuario_id,
+                l.created_at
+            FROM requisicao_compras_log l
+            LEFT JOIN requisicao_status rs ON rs.id = l.status
+            WHERE l.requisicao_id = :requisicao_id AND l.system_unit_id = :system_unit_id
+            ORDER BY l.created_at DESC
+        ");
+            $stmtLogs->execute([
+                ':requisicao_id' => $requisicao_id,
+                ':system_unit_id' => $system_unit_id
+            ]);
+            $logs = $stmtLogs->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'success' => true,
+                'requisicao' => $requisicao,
+                'itens' => $itens,
+                'logs' => $logs
+            ];
+        } catch (Exception $e) {
+            http_response_code(500);
+            return ['success' => false, 'message' => 'Erro ao buscar requisição: ' . $e->getMessage()];
+        }
+    }
+
+
 }
+
 ?>

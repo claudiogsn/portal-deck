@@ -214,6 +214,22 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros obrigatórios ausentes: nome, usuario_id ou itens'];
                 }
                 break;
+            case 'listPurchaseRequests':
+                if (isset($requestData['system_unit_id'])) {
+                    $response = ModeloBalancoController::listPurchaseRequests($requestData['system_unit_id'],$requestData['data_inicial'],$requestData['data_final']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros obrigatórios ausentes'];
+                }
+                break;
+                case 'getPurchaseRequestByDoc':
+                    if (isset($requestData['system_unit_id']) && isset($requestData['doc']) ) {
+                        $response = ModeloBalancoController::getPurchaseRequestByDoc($requestData['system_unit_id'],$requestData['doc']);
+                    } else {
+                        http_response_code(400);
+                        $response = ['error' => 'Parâmetros obrigatórios ausentes'];
+                    }
+                    break;
             case 'deleteModelo':
                 if (isset($requestData['id'])) {
                     $response = ModeloBalancoController::deleteModelo($requestData['id']);

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Solicitação de Compras</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: #f9f9f9;
+            padding: 15px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .header-section {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            margin-bottom: 15px;
+        }
+
+        .header-section h2 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .header-info {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-section input {
+            padding: 8px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            width: 100%;
+        }
+
+        .form-section button {
+            padding: 10px;
+            font-size: 14px;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .form-section button:active {
+            background-color: #005ecb;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .grid-header,
+        .grid-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 0.7fr;
+            background: white;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            align-items: center;
+        }
+
+        .grid-header {
+            background-color: #eeeeee;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .grid-row {
+            font-size: 13px;
+        }
+
+        .action-btn {
+            background-color: #007AFF;
+            color: white;
+            padding: 4px 6px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .action-btn:active {
+            background-color: #005ecb;
+        }
+
+        .action-btn-danger {
+            background-color: #ff3b30;
+        }
+
+        .action-btn-danger:active {
+            background-color: #d70015;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 100vw;
+            background-color: white;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            padding: 20px 15px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 16px;
+        }
+
+        .close-btn {
+            font-size: 24px;
+            font-weight: bold;
+            background: none;
+            border: none;
+            color: #007aff;
+            cursor: pointer;
+        }
+
+        .search-input {
+            margin-bottom: 15px;
+        }
+
+        .total-section {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            margin-bottom: 15px;
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            background-color: #34c759;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .submit-btn:active {
+            background-color: #248a3d;
+        }
+
+        .price-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: -8px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .quantity-input {
+            text-align: right;
+        }
+
+        /* Categorias retráteis */
+        .category-header {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-items {
+            display: none;
+            margin-left: 10px;
+        }
+
+        .category-expanded .category-items {
+            display: block;
+        }
+
+        .toggle-icon {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Modal para Seleção de Itens -->
+<div class="modal" id="itemModal">
+    <div class="modal-header">
+        <h2>Selecionar Produto</h2>
+        <button class="close-btn" onclick="fecharModal()">×</button>
+    </div>
+
+    <input type="text" id="item-search" class="search-input" placeholder="Buscar por código ou descrição" />
+
+    <div class="container" id="item-table-body">
+        <!-- Categorias e itens serão carregados dinamicamente aqui -->
+    </div>
+</div>
+
+<!-- Cabeçalho com informações -->
+<div class="header-section">
+    <h2>Solicitação de Compras</h2>
+    <div class="header-info" id="pageTitleUnidade"></div>
+    <div class="header-info" id="pageTitleModelo"></div>
+</div>
+
+<!-- Formulário de Solicitação -->
+<div class="form-section">
+    <input type="text" id="solicitante-nome" placeholder="Nome do Solicitante" />
+</div>
+
+<!-- Formulário de Itens -->
+<div class="form-section">
+    <input type="text" id="item-description" placeholder="Clique para selecionar um produto" onclick="abrirModal()" readonly />
+    <input type="hidden" id="item-unit" />
+
+    <div class="price-info">
+        <span>Preço unitário: <span id="preco-label">R$ 0,00</span></span>
+        <span>Total: <span id="total-label">R$ 0,00</span></span>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="item-quantity" placeholder="Quantidade" class="quantity-input" inputmode="numeric" />
+        <button id="add-item">Adicionar</button>
+    </div>
+</div>
+
+<!-- Lista de Itens Adicionados -->
+<div class="container">
+    <div class="grid-header">
+        <div>Descrição</div>
+        <div>Quantidade</div>
+        <div>Total</div>
+        <div>Ação</div>
+    </div>
+    <div id="result-table-body">
+        <!-- Itens adicionados aparecerão aqui -->
+    </div>
+</div>
+
+<!-- Total e Botão de Envio -->
+<div class="total-section">
+    Total da Compra: <span id="total-geral">R$ 0,00</span>
+</div>
+
+<button class="submit-btn" id="transfer-button">Enviar Solicitação</button>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Variáveis globais
+    let selectedItem = {
+        id: null,
+        codigo: null,
+        descricao: null,
+        unidade: null,
+        preco: 0
+    };
+
+    // Funções globais para o modal
+    function abrirModal() {
+        document.getElementById('itemModal').classList.add('active');
+    }
+
+    function fecharModal() {
+        document.getElementById('itemModal').classList.remove('active');
+    }
+
+    function selecionarItem(codigo, descricao, unidade, preco) {
+        selectedItem = {
+            id: codigo,
+            codigo: codigo,
+            descricao: descricao,
+            unidade: unidade,
+            preco: parseFloat(preco) || 0
+        };
+
+        document.getElementById('item-description').value = descricao;
+        document.getElementById('item-unit').value = unidade;
+        document.getElementById('preco-label').textContent = 'R$ ' + selectedItem.preco.toFixed(2).replace('.', ',');
+        document.getElementById('item-quantity').value = '';
+        document.getElementById('total-label').textContent = 'R$ 0,00';
+        fecharModal();
+        document.getElementById('item-quantity').focus();
+    }
+
+    function removerItem(btn) {
+        btn.closest('.grid-row').remove();
+        atualizarTotalizador();
+    }
+
+    function formatarMoeda(valor) {
+        return 'R$ ' + parseFloat(valor).toFixed(2).replace('.', ',');
+    }
+
+    function calcularTotal() {
+        if (!selectedItem.preco) return;
+
+        const quantidade = parseFloat(document.getElementById('item-quantity').value.replace(',', '.')) || 0;
+        const total = quantidade * selectedItem.preco;
+        document.getElementById('total-label').textContent = formatarMoeda(total);
+    }
+
+    function atualizarTotalizador() {
+        let total = 0;
+        document.querySelectorAll('#result-table-body .grid-row').forEach(row => {
+            const valor = row.querySelector('div:nth-child(3)').textContent
+                .replace('R$', '').replace(',', '.').trim();
+            total += parseFloat(valor) || 0;
+        });
+
+        document.getElementById('total-geral').textContent = formatarMoeda(total);
+    }
+
+    function aplicarMascaraQuantidade() {
+        const input = document.getElementById('item-quantity');
+        const unidade = document.getElementById('item-unit').value;
+        let valor = input.value.replace(/[^\d]/g, '');
+
+        if (['KG', 'LT', 'L'].includes(unidade)) {
+            // Mantém 3 casas decimais e exibe com vírgula
+            if (valor.length === 0) {
+                input.value = '';
+            } else {
+                const quantidade = (parseInt(valor) / 1000).toFixed(3);
+                input.value = quantidade.replace('.', ',');
+            }
+        } else {
+            // Inteiro
+            input.value = valor;
+        }
+
+        calcularTotal();
+    }
+
+    function toggleCategory(categoryHeader) {
+        const categoryContainer = categoryHeader.parentElement;
+        const isExpanded = categoryContainer.classList.toggle('category-expanded');
+        const toggleIcon = categoryHeader.querySelector('.toggle-icon');
+        toggleIcon.textContent = isExpanded ? '−' : '+';
+    }
+
+    function renderTabelaModal(itens) {
+        const container = document.getElementById('item-table-body');
+        container.innerHTML = '';
+
+        // Agrupar por categoria
+        const agrupado = {};
+        Object.values(itens).flat().forEach(item => {
+            const categoria = item.nome_categoria || 'Sem Categoria';
+            if (!agrupado[categoria]) agrupado[categoria] = [];
+            agrupado[categoria].push(item);
+        });
+
+        // Ordenar alfabeticamente dentro de cada categoria
+        Object.keys(agrupado).forEach(categoria => {
+            agrupado[categoria].sort((a, b) => a.nome_produto.localeCompare(b.nome_produto));
+        });
+
+        // Gerar DOM
+        Object.entries(agrupado).forEach(([categoria, itensCategoria]) => {
+            const categoryContainer = document.createElement('div');
+            categoryContainer.className = 'category-container';
+
+            const categoryHeader = document.createElement('div');
+            categoryHeader.className = 'category-header';
+            categoryHeader.innerHTML = `
+                <span>${categoria}</span>
+                <span class="toggle-icon">+</span>
+            `;
+            categoryHeader.onclick = () => toggleCategory(categoryHeader);
+
+            const categoryItems = document.createElement('div');
+            categoryItems.className = 'category-items';
+
+            itensCategoria.forEach(item => {
+                const preco = item.preco_custo ?? 0;
+                const row = document.createElement('div');
+                row.className = 'grid-row';
+                row.innerHTML = `
+                    <div>${item.nome_produto}</div>
+                    <div>${item.und_produto}</div>
+                    <div>${formatarMoeda(preco)}</div>
+                    <div><div class="action-btn" onclick="selecionarItem('${item.id_produto}', '${item.nome_produto}', '${item.und_produto}', '${preco}')">+</div></div>
+                `;
+                categoryItems.appendChild(row);
+            });
+
+            categoryContainer.appendChild(categoryHeader);
+            categoryContainer.appendChild(categoryItems);
+            container.appendChild(categoryContainer);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const baseUrl = window.location.hostname !== 'localhost' ?
+            'https://portal.vemprodeck.com.br/api/v1/index.php' :
+            'http://localhost/portal-deck/api/v1/index.php';
+
+        const baseUrlredirect = window.location.hostname !== 'localhost' ?
+            'https://portal.vemprodeck.com.br/external' :
+            'http://localhost/portal-deck/external';
+
+        let modeloNome = '';
+        let SystemUnitName = '';
+        let system_unit_id = '';
+
+        function extractSystemUnitId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tag = urlParams.get('tag');
+            if (tag) {
+                const [id] = tag.split('-');
+                system_unit_id = parseInt(id, 10);
+            }
+        }
+
+        let todosItens = {};
+
+        // Filtro dinâmico no input de busca
+        document.getElementById('item-search').addEventListener('keyup', function() {
+            const termo = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#item-table-body .grid-row');
+
+            rows.forEach(row => {
+                const textoLinha = row.textContent.toLowerCase();
+                row.style.display = textoLinha.includes(termo) ? '' : 'none';
+            });
+        });
+
+        // Máscara de quantidade baseada na unidade
+        document.getElementById('item-quantity').addEventListener('input', function() {
+            aplicarMascaraQuantidade();
+        });
+
+        // Adicionar item à tabela
+        document.getElementById('add-item').addEventListener('click', function() {
+            const quantidade = parseFloat(document.getElementById('item-quantity').value.replace(',', '.')) || 0;
+
+            if (!selectedItem.id || !selectedItem.descricao) {
+                Swal.fire('Erro', 'Selecione um produto antes de adicionar.', 'error');
+                return;
+            }
+
+            if (!quantidade || quantidade <= 0) {
+                Swal.fire('Erro', 'Informe uma quantidade válida.', 'error');
+                return;
+            }
+
+            const total = quantidade * selectedItem.preco;
+
+            // Adicionar à tabela
+            const row = document.createElement('div');
+            row.className = 'grid-row';
+            row.dataset.idProduto = selectedItem.id;
+            row.innerHTML = `
+                <div>${selectedItem.descricao}</div>
+                <div>${quantidade} ${selectedItem.unidade}</div>
+                <div>${formatarMoeda(total)}</div>
+                <div><div class="action-btn action-btn-danger" onclick="removerItem(this)">X</div></div>
+            `;
+            document.getElementById('result-table-body').appendChild(row);
+
+            // Limpar campos
+            document.getElementById('item-description').value = '';
+            document.getElementById('preco-label').textContent = 'R$ 0,00';
+            document.getElementById('item-quantity').value = '';
+            document.getElementById('total-label').textContent = 'R$ 0,00';
+            selectedItem = {
+                id: null,
+                codigo: null,
+                descricao: null,
+                unidade: null,
+                preco: 0
+            };
+
+            // Atualizar total
+            atualizarTotalizador();
+        });
+
+        async function loadItemsByTag() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tag = urlParams.get('tag');
+
+            if (!tag) {
+                Swal.fire("Erro", "Tag não encontrada.", "error");
+                return;
+            }
+            try {
+                const response = await axios.post(baseUrl, {
+                    method: 'getModelByTagCompras',
+                    data: { tag }
+                });
+
+                if (response.data && response.data.success) {
+                    const { modelo, itens } = response.data;
+                    modeloNome = modelo.nome;
+                    SystemUnitName = modelo.system_unit_name;
+
+                    // Atualizar os cabeçalhos
+                    document.getElementById('pageTitleUnidade').textContent = `Unidade: ${SystemUnitName}`;
+                    document.getElementById('pageTitleModelo').textContent = `Modelo de Compra: ${modeloNome}`;
+
+                    todosItens = itens;
+                    renderTabelaModal(todosItens);
+                } else {
+                    Swal.fire("Erro", "Falha ao carregar itens: " + response.data.message, "error");
+                }
+            } catch (error) {
+                console.error('Erro ao carregar itens:', error);
+                Swal.fire("Erro", "Erro ao carregar itens. Tente novamente.", "error");
+            }
+        }
+
+        async function sendTransferItems() {
+            const solicitanteNome = document.getElementById('solicitante-nome').value;
+
+            if (!solicitanteNome) {
+                Swal.fire('Erro', 'Informe o nome do solicitante.', 'error');
+                return;
+            }
+
+            const items = [];
+            document.querySelectorAll('#result-table-body .grid-row').forEach((row, index) => {
+                const id_produto = row.dataset.idProduto;
+                const produto = row.querySelector('div:nth-child(1)').textContent;
+                const quantidadeText = row.querySelector('div:nth-child(2)').textContent;
+                const quantidade = parseFloat(quantidadeText.split(' ')[0].replace(',', '.'));
+                const precoTexto = row.querySelector('div:nth-child(3)').textContent
+                    .replace('R$', '').replace(',', '.').trim();
+                const preco = parseFloat(precoTexto);
+
+                if (id_produto && produto && !isNaN(quantidade)) {
+                    items.push({
+                        id_produto,
+                        produto,
+                        seq: index + 1,
+                        quantidade,
+                        preco
+                    });
+                }
+            });
+
+            if (items.length === 0) {
+                Swal.fire('Erro', 'Adicione ao menos um item à requisição.', 'error');
+                return;
+            }
+
+            const result = await Swal.fire({
+                title: 'Confirmar Requisição?',
+                text: 'Deseja realmente registrar esta requisição de compras?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, Enviar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!result.isConfirmed) return;
+
+            Swal.fire({
+                title: 'Enviando...',
+                text: 'Aguarde o processamento.',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const transferDate = new Date().toISOString().split('T')[0];
+                const response = await axios.post(baseUrl, {
+                    method: 'saveComprasItems',
+                    data: {
+                        system_unit_id: system_unit_id,
+                        data: transferDate,
+                        usuario_id: 5,
+                        solicitante_nome: solicitanteNome,
+                        itens: items
+                    }
+                });
+
+                Swal.close();
+
+                if (response.data.success) {
+                    await Swal.fire({
+                        title: 'Requisição realizada com sucesso!',
+                        text: `Documento nº ${response.data.doc}`,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+
+                    const requisicaoPayload = {
+                        unidade: SystemUnitName,
+                        solicitante: solicitanteNome,
+                        data: transferDate,
+                        doc: response.data.doc,
+                        itens: items
+                    };
+
+                    localStorage.setItem('requisicaoPdfData', JSON.stringify(requisicaoPayload));
+                    window.open(`${baseUrlredirect}/reports/requisicao.html`, '_blank');
+
+                    // Limpar formulário
+                    document.getElementById('solicitante-nome').value = '';
+                    document.getElementById('result-table-body').innerHTML = '';
+                    document.getElementById('total-geral').textContent = 'R$ 0,00';
+                } else {
+                    Swal.fire('Erro', response.data.message, 'error');
+                }
+            } catch (err) {
+                Swal.close();
+                console.error(err);
+                Swal.fire('Erro', 'Falha ao enviar os dados para o servidor.', 'error');
+            }
+        }
+
+        // Configurar o evento para o botão de enviar
+        document.getElementById('transfer-button').addEventListener('click', sendTransferItems);
+
+        // Inicialização
+        extractSystemUnitId();
+        loadItemsByTag();
+    });
+</script>
+</body>
+</html>

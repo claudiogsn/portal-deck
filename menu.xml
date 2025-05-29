@@ -51,14 +51,14 @@
         </menu>
       </menuitem>
       <menuitem label="Compras">
-        <icon>fas:balance-scale fa-fw</icon>
+        <icon>fas:shopping-cart fa-fw</icon>
         <menu>
           <menuitem label="Modelos de Requisição de Compras">
             <action>CreateModeloCompras</action>
             <icon>fas:circle fa-fw</icon>
           </menuitem>
           <menuitem label="Relatório de Requisição de Compras">
-            <action>ListBalanco</action>
+            <action>ListCompras</action>
             <icon>fas:circle fa-fw</icon>
           </menuitem>
         </menu>

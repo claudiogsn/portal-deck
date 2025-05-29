@@ -2,9 +2,9 @@
 // Verifica se o hostname não é 'localhost'
 $host = $_SERVER['HTTP_HOST'];
 if ($host !== 'localhost') {
-    $url = "https://portal.vemprodeck.com.br/external/solicitarCompras.html?tag=";
+    $url = "https://portal.vemprodeck.com.br/external/pedido.html?tag=";
 } else {
-    $url = "http://localhost/portal-deck/external/solicitarCompras.html?tag=";
+    $url = "http://localhost/portal-deck/external/pedido.html?tag=";
 }
 
 // Verifica se a tag foi passada como parâmetro

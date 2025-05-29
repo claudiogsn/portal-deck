@@ -459,12 +459,13 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
 
                 $stmt = $pdo->prepare("
                 INSERT INTO requisicao_compras_itens (
-                    requisicao_id, id_produto, produto, seq, preco, quantidade, quantidade_comprada, created_at, updated_at
+                   system_unit_id,requisicao_id, id_produto, produto, seq, preco, quantidade, quantidade_comprada, created_at, updated_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, NULL, NOW(), NOW()
+                    ?,?, ?, ?, ?, ?, ?, NULL, NOW(), NOW()
                 )
             ");
                 $stmt->execute([
+                    $system_unit_id,
                     $requisicao_id,
                     $item['id_produto'],
                     $item['produto'],
@@ -477,12 +478,13 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
             // === Cria log da solicitação ===
             $stmt = $pdo->prepare("
             INSERT INTO requisicao_compras_log (
-                requisicao_id, status, observacao, usuario_id, created_at
+                system_unit_id,requisicao_id, status, observacao, usuario_id, created_at
             ) VALUES (
-                ?, 1, 'Requisição criada pela loja.', ?, NOW()
+                ?,?, 1, 'Requisição criada pela loja.', ?, NOW()
             )
         ");
             $stmt->execute([
+                $system_unit_id,
                 $requisicao_id,
                 $usuario_id
             ]);
