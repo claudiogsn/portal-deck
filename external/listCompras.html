@@ -54,7 +54,7 @@
 
         /* Estilo da linha selecionada */
         .selected-row {
-            background-color: rgba(0, 123, 255, 0.2); /* Azul com baixa opacidade */
+            background-color: #e3f2fd !important;
         }
 
         
@@ -91,8 +91,23 @@
                 </div>
                 <div class="col-md-3 text-right">
                     <button id="btnBuscar" class="btn btn-primary">Buscar</button>
-                    <button id="btnExportarSelecionados" class="btn btn-success">Exportar Selecionados</button>
+                
+                    <span id="contadorSelecionados" style="margin: 0 10px; font-weight: bold; color: #1976d2;">
+                        Selecionados: 0
+                    </span>
+                
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Ações <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" id="acaoExportar">Exportar Selecionados</a></li>
+                            <li><a href="#" id="acaoAprovar">Aprovar Selecionados</a></li>
+                            <li><a href="#" id="acaoRejeitar">Rejeitar Selecionados</a></li>
+                        </ul>
+                    </div>
                 </div>
+                
             </div>
         </div>
 
@@ -107,8 +122,8 @@
                                 <th>
                                 <input class="chk-col-blue"  type="checkbox" id="selectAll" title="Selecionar Todos"><label for="selectAll" ></label>
                                 </th>
-                                <th>Doc</th>
-                                <th>Nome</th>
+                                <th>DOC</th>
+                                <th>Status</th>
                                 <th>Data</th>
                                 <th>Ações</th>
                             </tr>
@@ -171,6 +186,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 
     <script src="script/listCompras.js"></script> <!-- Script externo -->
+
+    <!-- Modal Realizar Entrega -->
+    <div class="modal fade" id="modalEntrega" tabindex="-1" role="dialog" aria-labelledby="modalEntregaLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title" id="modalEntregaLabel">Realizar Entrega</h4>
+          </div>
+          <div class="modal-body">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Qtd. Solicitada</th>
+                  <th>Qtd. Comprada</th>
+                </tr>
+              </thead>
+              <tbody id="entregaItensGrid"></tbody>
+            </table>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="btnEnviarEntrega">Enviar</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
 </body>
 
 </html>
+
+

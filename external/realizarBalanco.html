@@ -288,7 +288,7 @@
                     });
                 }
     
-                $('.quantidade').each(function () {
+                $('.qtd-comprada').each(function () {
                     const unidade = $(this).closest('tr').find('td:nth-child(2)').text();
                     if (['KG', 'LT', 'L'].includes(unidade)) {
                         $(this).on('input', function () {

@@ -10,6 +10,7 @@ $(document).ready(function () {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     const unitId = urlParams.get('unit_id');
+    const username = urlParams.get('username');
 
     let selectedDocs = [];
     let currentItems = [];
@@ -52,10 +53,15 @@ $(document).ready(function () {
         }
     }
 
+    function atualizarContadorSelecionados() {
+        $('#contadorSelecionados').text('Selecionados: ' + selectedDocs.length);
+    }
+
     function renderBalancos(requisicoes) {
         const tbody = $('#balancosTable tbody');
         tbody.empty();
         selectedDocs = [];
+        atualizarContadorSelecionados();
 
         requisicoes.forEach(requisicao => {
             const row = $(`
@@ -64,10 +70,16 @@ $(document).ready(function () {
                     <td>${requisicao.doc}</td>
                     <td>${requisicao.status_descricao}</td>
                     <td>${new Date(requisicao.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                    <td><button class="btn btn-info btnDetalhes" data-doc="${requisicao.doc}">Ver Detalhes</button></td>
-                </tr>
-            `);
+                    <td>
+                      <button class="btn btn-info btnDetalhes" data-doc="${requisicao.doc}">Ver Detalhes</button>
+                      <button class="btn btn-success btnEntrega" data-doc="${requisicao.doc}">Realizar entrega</button>
+                    </td>
+                </tr>`
+            );
 
+            row.find('.btnEntrega').on('click', function () {
+                abrirModalEntrega(requisicao.doc);
+            });
             tbody.append(row);
 
             row.find('.balanco-checkbox').on('change', function () {
@@ -79,6 +91,8 @@ $(document).ready(function () {
                     row.removeClass('selected-row');
                     selectedDocs = selectedDocs.filter(item => item !== doc);
                 }
+                atualizarContadorSelecionados();
+                console.log(selectedDocs);
             });
         });
 
@@ -143,7 +157,8 @@ $(document).ready(function () {
         $('#balancoModal').data('created_at', requisicao.created_at);
     }
 
-    $('#btnExportarSelecionados').click(async function () {
+    $('#acaoExportar').click(async function () {
+        // Mesma lógica do antigo btnExportarSelecionados
         if (selectedDocs.length === 0) {
             Swal.fire("Atenção", "Nenhuma requisição foi selecionada.", "warning");
             return;
@@ -299,5 +314,157 @@ $(document).ready(function () {
         loadBalancos(dataInicial, dataFinal, doc);
     });
 
+    $('#acaoAprovar').click(function () {
+        handleStatusChangeSelecionados(2, 'Aprovar');
+    });
+    
+    $('#acaoRejeitar').click(function () {
+        handleStatusChangeSelecionados(3, 'Reprovar');
+    });
+    
+    async function handleStatusChangeSelecionados(statusId, acaoNome) {
+        if (selectedDocs.length === 0) {
+            Swal.fire('Atenção', 'Nenhuma requisição foi selecionada.', 'warning');
+            return;
+        }
+    
+        const listaDocs = selectedDocs.map(doc => `<li>${doc}</li>`).join('');
+        const result = await Swal.fire({
+            title: `${acaoNome} Selecionados`,
+            html: `<p>Tem certeza que deseja <b>${acaoNome.toLowerCase()}</b> os seguintes documentos?</p><ul style='text-align:left'>${listaDocs}</ul>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: `Sim, ${acaoNome.toLowerCase()}`,
+            cancelButtonText: 'Cancelar'
+        });
+    
+        if (!result.isConfirmed) return;
+    
+        Swal.fire({
+            title: 'Processando...',
+            text: 'Alterando status das requisições...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    
+        let erros = [];
+        for (const doc of selectedDocs) {
+            try {
+                const response = await axios.post(baseUrl, {
+                    method: 'changeStatusRequisicao',
+                    token: token,
+                    data: {
+                        doc: doc,
+                        system_unit_id: unitId,
+                        status_id: statusId,
+                        username: username
+                    }
+                });
+                if (!(response.data && response.data.success)) {
+                    erros.push(doc);
+                }
+            } catch (e) {
+                erros.push(doc);
+            }
+        }
+        Swal.close();
+        if (erros.length === 0) {
+            Swal.fire('Sucesso', `Todos os documentos foram ${acaoNome === 'Aprovar' ? 'aprovados' : 'reprovados'} com sucesso!`, 'success');
+            loadBalancos();
+        } else {
+            Swal.fire('Erro', `Os seguintes documentos falharam: <ul style='text-align:left'>${erros.map(d=>`<li>${d}</li>`).join('')}</ul>`, 'error');
+        }
+    }
+    async function abrirModalEntrega(doc) {
+        showLoader();
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'getPurchaseRequestByDoc',
+                token: token,
+                data: {
+                    system_unit_id: unitId,
+                    doc: doc
+                }
+            });
+            if (response.data && response.data.success) {
+                const itens = response.data.itens;
+                $('#modalEntrega').data('doc', doc);
+                const grid = itens.map(item => `
+                    <tr>
+                      <td>${item.produto}</td>
+                      <td>${item.quantidade}</td>
+                      <td><input type="text" inputmode="numeric" id="qtd-comprada" class="form-control qtd-comprada" data-codigo="${item.codigo}" placeholder="0"></td>
+                    </tr>
+                `).join('');
+                $('#entregaItensGrid').html(grid);
+                $('#modalEntrega').modal('show');
+                $('.qtd-comprada').each(function () {
+                    const unidade = 'KG';
+                    if (['KG', 'LT', 'L'].includes(unidade)) {
+                        $(this).on('input', function () {
+                            let valor = $(this).val().replace(/\D/g, '');
+                            valor = (valor / 1000).toFixed(3);
+                            $(this).val(valor.replace('.', ','));
+                        });
+                    } else {
+                        $(this).on('input', function () {
+                            $(this).val($(this).val().replace(/\D/g, ''));
+                        });
+                    }
+                });
+            } else {
+                Swal.fire('Erro', 'Erro ao carregar itens da requisição.', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Erro', 'Erro ao carregar itens da requisição.', 'error');
+        } finally {
+            hideLoader();
+        }
+    }
+
+   
+   
+    
+    $('#btnEnviarEntrega').on('click', async function () {
+        const doc = $('#modalEntrega').data('doc');
+        const itens = [];
+        $('#entregaItensGrid tr').each(function () {
+            const codigo = $(this).find('.qtd-comprada').data('codigo');
+            let quantidade = $(this).find('.qtd-comprada').val();
+            quantidade = quantidade === '' ? 0 : parseFloat(quantidade);
+            itens.push({ codigo, quantidade });
+        });
+        showLoader();
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'realizarEntrega',
+                token: token,
+                data: {
+                    doc: doc,
+                    system_unit_id: unitId,
+                    username: username,
+                    itens: itens
+                }
+            });
+            if (response.data && response.data.success) {
+                Swal.fire('Sucesso', 'Entrega realizada com sucesso!', 'success');
+                $('#modalEntrega').modal('hide');
+                loadBalancos();
+            } else {
+                Swal.fire('Erro', 'Erro ao realizar entrega.', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Erro', 'Erro ao realizar entrega.', 'error');
+        } finally {
+            hideLoader();
+        }
+    });
+    
+
     loadBalancos();
 });
+
+

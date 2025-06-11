@@ -29,6 +29,7 @@ require_once 'controllers/CategoriesController.php';
 require_once 'controllers/MovimentacaoController.php';
 require_once 'controllers/ModeloBalancoController.php';
 require_once 'controllers/BiController.php';
+require_once 'controllers/ComprasController.php';
 
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -274,7 +275,66 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro tag ausente'];
                 }
                 break;
-            
+            case 'listarRequisicoes':
+                if (isset($requestData['system_unit_id'])) {
+                    $response = ComprasController::listarRequisicoes($requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro system_unit_id ausente'];
+                }
+                break;
+
+            case 'listarItensDaRequisicao':
+                if (isset($requestData['requisicao_id']) && isset($requestData['system_unit_id'])) {
+                    $response = ComprasController::listarItensDaRequisicao($requestData['requisicao_id'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros requisicao_id ou system_unit_id ausente'];
+                }
+                break;
+
+            case 'listarLogDaRequisicao':
+                if (isset($requestData['requisicao_id']) && isset($requestData['system_unit_id'])) {
+                    $response = ComprasController::listarLogDaRequisicao($requestData['requisicao_id'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros requisicao_id ou system_unit_id ausente'];
+                }
+                break;
+            case 'changeStatusRequisicao':
+                if (isset($requestData['doc'], $requestData['system_unit_id'], $requestData['status_id'], $requestData['username'])) {
+                    $response = ComprasController::changeStatus(
+                        $requestData['doc'],
+                        $requestData['system_unit_id'],
+                        $requestData['status_id'],
+                        $requestData['username']
+                    );
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros doc, system_unit_id, status_id ou username ausentes'];
+                }
+                break;
+
+            case 'realizarEntrega':
+                if (
+                    isset($requestData['doc'], $requestData['system_unit_id'], $requestData['username'], $requestData['itens'])
+                    && is_array($requestData['itens'])
+                ) {
+                    $response = ComprasController::realizarEntrega(
+                        $requestData['doc'],
+                        $requestData['system_unit_id'],
+                        $requestData['username'],
+                        $requestData['itens']
+                    );
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros doc, system_unit_id, username ou itens ausentes ou inválidos'];
+                }
+                break;
+
+
+
+
             case  'saveBalanceItems':
                 if (isset($requestData['system_unit_id']) && isset($requestData['itens'])) {
                     $response = MovimentacaoController::saveBalanceItems($requestData);

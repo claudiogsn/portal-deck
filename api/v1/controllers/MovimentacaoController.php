@@ -3,10 +3,12 @@ date_default_timezone_set('America/Rio_Branco');
 require_once __DIR__ . '/../database/db.php'; // Ajustando o caminho para o arquivo db.php
 require_once __DIR__ . '/../database/db-permission.php'; // Ajustando o caminho para o arquivo db.php
 
-class MovimentacaoController {
+class MovimentacaoController
+{
 
     // Criação de nova movimentação
-    public static function createMovimentacao($data) {
+    public static function createMovimentacao($data)
+    {
         global $pdo;
 
         // Campos obrigatórios para a movimentação
@@ -50,7 +52,8 @@ class MovimentacaoController {
     }
 
     // Criação de múltiplas movimentações
-    public static function createMovimentacaoMassa($dataArray) {
+    public static function createMovimentacaoMassa($dataArray)
+    {
         $result = array('success' => true, 'messages' => array());
 
         foreach ($dataArray as $data) {
@@ -67,7 +70,8 @@ class MovimentacaoController {
     }
 
     // Atualização de movimentação
-    public static function updateMovimentacao($id, $data, $system_unit_id) {
+    public static function updateMovimentacao($id, $data, $system_unit_id)
+    {
         global $pdo;
 
         $sql = "UPDATE movimentacao SET ";
@@ -92,7 +96,8 @@ class MovimentacaoController {
     }
 
     // Obter movimentação por ID
-    public static function getMovimentacaoById($id, $system_unit_id) {
+    public static function getMovimentacaoById($id, $system_unit_id)
+    {
         global $pdo;
 
         $stmt = $pdo->prepare("SELECT * FROM movimentacao WHERE id = :id AND system_unit_id = :system_unit_id");
@@ -104,7 +109,8 @@ class MovimentacaoController {
     }
 
     // Obter movimentação por doc
-    public static function getMovimentacaoByDoc($system_unit_id, $doc) {
+    public static function getMovimentacaoByDoc($system_unit_id, $doc)
+    {
         global $pdo;
 
         $stmt = $pdo->prepare("SELECT * FROM movimentacao WHERE system_unit_id = :system_unit_id AND doc = :doc");
@@ -116,7 +122,8 @@ class MovimentacaoController {
     }
 
     // Deletar movimentação
-    public static function deleteMovimentacao($id, $system_unit_id) {
+    public static function deleteMovimentacao($id, $system_unit_id)
+    {
         global $pdo;
 
         $stmt = $pdo->prepare("DELETE FROM movimentacao WHERE id = :id AND system_unit_id = :system_unit_id");
@@ -132,7 +139,8 @@ class MovimentacaoController {
     }
 
     // Listar movimentações por unidade do sistema
-    public static function listMovimentacoes($system_unit_id) {
+    public static function listMovimentacoes($system_unit_id)
+    {
         try {
             global $pdo;
 
@@ -149,7 +157,8 @@ class MovimentacaoController {
     }
 
     // Obter última movimentação de determinado tipo
-    public static function getLastMov($system_unit_id, $tipo) {
+    public static function getLastMov($system_unit_id, $tipo)
+    {
         global $pdo;
 
         $stmt = $pdo->prepare("SELECT * FROM movimentacao WHERE system_unit_id = :system_unit_id AND tipo = :tipo ORDER BY created_at DESC LIMIT 1");
@@ -160,7 +169,9 @@ class MovimentacaoController {
 
         return $movimentacao ? $movimentacao['doc'] : $tipo . '-000000';
     }
-    public static function getLastMovCompras($system_unit_id,$tipo) {
+
+    public static function getLastMovCompras($system_unit_id, $tipo)
+    {
         global $pdo;
 
         $stmt = $pdo->prepare("SELECT * FROM requisicao_compras WHERE system_unit_id = :system_unit_id ORDER BY created_at DESC LIMIT 1");
@@ -172,7 +183,8 @@ class MovimentacaoController {
     }
 
     // Função para incrementar o documento (doc)
-    private static function incrementDoc($ultimoDoc, $prefixo) {
+    private static function incrementDoc($ultimoDoc, $prefixo)
+    {
         // Supondo que o formato do doc seja algo como "t-000001" ou "b-000001"
         if (preg_match('/^' . $prefixo . '-(\d+)$/', $ultimoDoc, $matches)) {
             $numero = (int)$matches[1] + 1;
@@ -184,18 +196,19 @@ class MovimentacaoController {
     // Métodos Específicos para Balanço
 
     // Listar balanços agrupados por 'doc' com mais informações e filtro de data
-public static function listBalance($system_unit_id, $data_inicial = null, $data_final = null) {
-    global $pdo;
+    public static function listBalance($system_unit_id, $data_inicial = null, $data_final = null)
+    {
+        global $pdo;
 
-    try {
-        // Validação das datas
-        if (!empty($data_inicial) && !empty($data_final) && $data_inicial > $data_final) {
-            http_response_code(400); // Código HTTP 400 para Bad Request
-            return ['success' => false, 'message' => 'A data inicial não pode ser maior que a data final.'];
-        }
+        try {
+            // Validação das datas
+            if (!empty($data_inicial) && !empty($data_final) && $data_inicial > $data_final) {
+                http_response_code(400); // Código HTTP 400 para Bad Request
+                return ['success' => false, 'message' => 'A data inicial não pode ser maior que a data final.'];
+            }
 
-        // Constrói a base da consulta
-        $query = "
+            // Constrói a base da consulta
+            $query = "
             SELECT 
                 m.doc,
                 COALESCE(m.tipo_mov, 'Não Informado') AS tipo_mov,
@@ -215,46 +228,46 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
             WHERE m.system_unit_id = :system_unit_id 
             AND m.tipo = 'b'";
 
-        // Adiciona as condições de data, se fornecidas
-        if (!empty($data_inicial) && !empty($data_final)) {
-            $query .= " AND m.created_at BETWEEN :data_inicial AND :data_final";
-        } elseif (!empty($data_inicial)) {
-            $query .= " AND m.created_at >= :data_inicial";
-        } elseif (!empty($data_final)) {
-            $query .= " AND m.created_at <= :data_final";
+            // Adiciona as condições de data, se fornecidas
+            if (!empty($data_inicial) && !empty($data_final)) {
+                $query .= " AND m.created_at BETWEEN :data_inicial AND :data_final";
+            } elseif (!empty($data_inicial)) {
+                $query .= " AND m.created_at >= :data_inicial";
+            } elseif (!empty($data_final)) {
+                $query .= " AND m.created_at <= :data_final";
+            }
+
+            $query .= " GROUP BY m.doc ORDER BY MAX(m.created_at) DESC";
+
+            $stmt = $pdo->prepare($query);
+            $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
+
+            // Bind das datas se fornecidas
+            if (!empty($data_inicial)) {
+                $stmt->bindParam(':data_inicial', $data_inicial);
+            }
+            if (!empty($data_final)) {
+                $stmt->bindParam(':data_final', $data_final);
+            }
+
+            $stmt->execute();
+            $balances = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Decodifica os itens de JSON para array/objeto
+            foreach ($balances as &$balance) {
+                $balance['itens'] = json_decode($balance['itens'], true); // Converte o JSON em array associativo
+            }
+
+            return ['success' => true, 'balances' => $balances];
+        } catch (Exception $e) {
+            http_response_code(500); // Código HTTP 500 para erro interno
+            return ['success' => false, 'message' => 'Erro ao listar balanços: ' . $e->getMessage()];
         }
-
-        $query .= " GROUP BY m.doc ORDER BY MAX(m.created_at) DESC";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->bindParam(':system_unit_id', $system_unit_id, PDO::PARAM_INT);
-
-        // Bind das datas se fornecidas
-        if (!empty($data_inicial)) {
-            $stmt->bindParam(':data_inicial', $data_inicial);
-        }
-        if (!empty($data_final)) {
-            $stmt->bindParam(':data_final', $data_final);
-        }
-
-        $stmt->execute();
-        $balances = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Decodifica os itens de JSON para array/objeto
-        foreach ($balances as &$balance) {
-            $balance['itens'] = json_decode($balance['itens'], true); // Converte o JSON em array associativo
-        }
-
-        return ['success' => true, 'balances' => $balances];
-    } catch (Exception $e) {
-        http_response_code(500); // Código HTTP 500 para erro interno
-        return ['success' => false, 'message' => 'Erro ao listar balanços: ' . $e->getMessage()];
     }
-}
 
 
-
-    public static function getBalanceByDoc($system_unit_id, $doc) {
+    public static function getBalanceByDoc($system_unit_id, $doc)
+    {
         global $pdo;   // Banco de dados principal
         global $pdop;  // Segundo banco de dados (contendo system_users)
 
@@ -334,7 +347,8 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
 
 
     // Criação de movimentação de balanço (tipo 'b')
-    public static function saveBalanceItems($data) {
+    public static function saveBalanceItems($data)
+    {
         global $pdo;
 
         // Campos obrigatórios para a movimentação
@@ -402,7 +416,8 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
         }
     }
 
-    public static function saveComprasItems($data) {
+    public static function saveComprasItems($data)
+    {
         global $pdo;
 
         // Validação de campos obrigatórios no corpo principal
@@ -510,7 +525,8 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
     // Métodos Específicos para Transferências
 
     // Criação de transferência (tipo 't')
-    public static function createTransferItems($data) {
+    public static function createTransferItems($data)
+    {
         global $pdo;
 
         // Verifica se todos os campos obrigatórios estão presentes
@@ -611,9 +627,9 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
     }
 
 
-
     // Listar transferências
-    public static function listTransfers($system_unit_id) {
+    public static function listTransfers($system_unit_id)
+    {
         global $pdo;
 
         try {
@@ -629,12 +645,14 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
     }
 
     // Obter a última transferência
-    public static function getLastTransfer($system_unit_id) {
+    public static function getLastTransfer($system_unit_id)
+    {
         return self::getLastMov($system_unit_id, 't');
     }
 
     // Obter transferência por doc
-    public static function getTransferByDoc($system_unit_id, $doc) {
+    public static function getTransferByDoc($system_unit_id, $doc)
+    {
         global $pdo;
 
         $stmt = $pdo->prepare("SELECT * FROM movimentacao WHERE system_unit_id = :system_unit_id AND doc = :doc AND tipo = 't'");
@@ -645,4 +663,5 @@ public static function listBalance($system_unit_id, $data_inicial = null, $data_
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
+
 ?>
