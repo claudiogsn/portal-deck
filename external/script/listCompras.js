@@ -457,9 +457,9 @@ $(document).ready(function () {
                 $('#modalEntrega').data('doc', doc);
                 const grid = itens.map(item => `
                     <tr>
-                      <td>${item.produto}</td>
-                      <td>${item.quantidade}</td>
-                      <td><input type="text" inputmode="numeric" id="qtd-comprada" class="form-control qtd-comprada" data-codigo="${item.codigo}" placeholder="0"></td>
+                        <td>${item.produto}</td>
+                        <td>${item.quantidade}</td>
+                        <td><input type="text" inputmode="numeric" id="qtd-comprada" class="form-control qtd-comprada" data-codigo="${item.codigo}" value="${item.quantidade.toString().replace('.', ',')}" /></td>
                     </tr>
                 `).join('');
                 $('#entregaItensGrid').html(grid);
