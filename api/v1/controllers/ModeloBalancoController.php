@@ -955,7 +955,6 @@ class ModeloBalancoController
         global $pdo;
         global $pdop;
 
-        try {
             // 1. Buscar o cabeçalho da requisição com descrição do status
             $stmtHeader = $pdo->prepare("
             SELECT
@@ -965,7 +964,7 @@ class ModeloBalancoController
             LEFT JOIN requisicao_status rs ON rs.id = rc.status
             WHERE rc.system_unit_id = :system_unit_id AND rc.doc = :doc
             LIMIT 1
-        ");
+            ");
             $stmtHeader->execute([
                 ':system_unit_id' => $system_unit_id,
                 ':doc' => $doc
@@ -996,7 +995,7 @@ class ModeloBalancoController
             LEFT JOIN products p ON p.codigo = i.id_produto AND p.system_unit_id = i.system_unit_id
             WHERE i.requisicao_id = :requisicao_id AND i.system_unit_id = :system_unit_id
             ORDER BY i.seq ASC
-        ");
+            ");
             $stmtItens->execute([
                 ':requisicao_id' => $requisicao_id,
                 ':system_unit_id' => $system_unit_id
@@ -1016,7 +1015,7 @@ class ModeloBalancoController
             LEFT JOIN requisicao_status rs ON rs.id = l.status
             WHERE l.requisicao_id = :requisicao_id AND l.system_unit_id = :system_unit_id
             ORDER BY l.created_at DESC
-        ");
+            ");
             $stmtLogs->execute([
                 ':requisicao_id' => $requisicao_id,
                 ':system_unit_id' => $system_unit_id
@@ -1060,10 +1059,7 @@ class ModeloBalancoController
                 'itens' => $itens,
                 'logs' => $logs
             ];
-        } catch (Exception $e) {
-            http_response_code(500);
-            return ['success' => false, 'message' => 'Erro ao buscar requisição: ' . $e->getMessage()];
-        }
+
     }
 
 

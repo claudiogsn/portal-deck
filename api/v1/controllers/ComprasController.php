@@ -139,12 +139,13 @@ class ComprasController
             // Atualiza o status da requisição
             $stmtUpdate = $pdo->prepare("
             UPDATE requisicao_compras
-            SET status = :status, updated_at = NOW()
+            SET status = :status, updated_at = :updated_at
             WHERE id = :id
         ");
             $stmtUpdate->execute([
                 ':status' => $new_status_id,
-                ':id' => $requisicao_id
+                ':id' => $requisicao_id,
+                ':updated_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
             ]);
 
 
@@ -172,6 +173,7 @@ class ComprasController
     public static function realizarEntrega($doc, $system_unit_id, $username, $itens)
     {
         global $pdo;
+        global $pdop;
 
         try {
             // Verifica se o status 4 existe
@@ -182,8 +184,6 @@ class ComprasController
             if (!$statusData) {
                 return ['success' => false, 'message' => 'Status "Entregue" (id=4) não encontrado.'];
             }
-
-            $statusDescricao = $statusData['descricao'];
 
             // Busca a requisição pelo doc e unidade
             $stmtReq = $pdo->prepare("SELECT id FROM requisicao_compras WHERE doc = :doc AND system_unit_id = :unit_id LIMIT 1");
@@ -199,33 +199,49 @@ class ComprasController
 
             $requisicao_id = $requisicao['id'];
 
+            // Buscar ID do usuário pelo login
+            $stmtUser = $pdop->prepare("SELECT id FROM system_users WHERE id = :id LIMIT 1");
+            $stmtUser->execute([':id' => $username]);
+            $user = $stmtUser->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                return ['success' => false, 'message' => 'Usuário não encontrado'];
+            }
+
+            $usuario_id = $user['id'];
+
             // Atualiza os itens com a quantidade entregue
             $stmtUpdateItem = $pdo->prepare("
             UPDATE requisicao_compras_itens
-            SET quantidade_comprada = :quantidade, updated_at = NOW()
-            WHERE id = :item_id AND requisicao_id = :requisicao_id AND system_unit_id = :unit_id
+            SET quantidade_comprada = :quantidade, updated_at = :updated_at
+            WHERE id_produto = :item_id AND requisicao_id = :requisicao_id AND system_unit_id = :unit_id
         ");
 
             foreach ($itens as $item) {
-                if (!isset($item['id']) || !isset($item['quantidade_comprada'])) {
-                    continue; // Ignora itens mal formatados
-                }
-
                 $stmtUpdateItem->execute([
-                    ':quantidade' => $item['quantidade_comprada'],
-                    ':item_id' => $item['id'],
+                    ':quantidade' => $item['quantidade'],
+                    ':item_id' => $item['codigo'],
                     ':requisicao_id' => $requisicao_id,
-                    ':unit_id' => $system_unit_id
+                    ':unit_id' => $system_unit_id,
+                    ':updated_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
                 ]);
             }
 
             // Atualiza o status da requisição para 4
             $stmtUpdateReq = $pdo->prepare("
             UPDATE requisicao_compras
-            SET status = 4, updated_at = NOW()
+            SET status = 4, updated_at = :updated_at
             WHERE id = :id
         ");
-            $stmtUpdateReq->execute([':id' => $requisicao_id]);
+            $stmtUpdateReq->execute([
+                ':id' => $requisicao_id,
+                ':updated_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
+            ]);
+
+            // Verifica se alguma linha foi atualizada (opcional para debug)
+            if ($stmtUpdateReq->rowCount() === 0) {
+                return ['success' => false, 'message' => 'Nenhuma linha foi atualizada na requisição.'];
+            }
 
             // Insere log
             $stmtLog = $pdo->prepare("
@@ -235,12 +251,12 @@ class ComprasController
             $stmtLog->execute([
                 ':requisicao_id' => $requisicao_id,
                 ':system_unit_id' => $system_unit_id,
-                ':observacao' => 'Status alterado para: ' . $statusDescricao,
-                ':usuario_id' => $username,
-                ':created_at' => date('Y-m-d H:i:s')
+                ':observacao' => 'Status alterado para: ' . $statusData['descricao'],
+                ':usuario_id' => $usuario_id,
+                ':created_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
             ]);
 
-            return ['success' => true, 'message' => 'Entrega registrada com sucesso e status alterado para: ' . $statusDescricao];
+            return ['success' => true, 'message' => 'Entrega registrada com sucesso e status alterado para: ' . $statusData['descricao']];
         } catch (Exception $e) {
             return ['success' => false, 'message' => 'Erro ao registrar entrega: ' . $e->getMessage()];
         }
