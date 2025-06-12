@@ -57,13 +57,45 @@ $(document).ready(function () {
         $('#contadorSelecionados').text('Selecionados: ' + selectedDocs.length);
     }
 
+    function gerarItemConfirmarRecebimento(requisicao) {
+        if (requisicao.status === 4) {
+            return `<li><a href="#" class="btnConfirmarRecebimento" data-doc="${requisicao.doc}">Confirmar Recebimento</a></li>`;
+        } else {
+            return `<li>
+                <a class="dropdown-item confirmar-recebimento disabled-link"
+                   href="#"
+                   tabindex="-1"
+                   aria-disabled="true"
+                   style="pointer-events: none; color: #aaa; cursor: not-allowed;">
+                   Confirmar Recebimento
+                </a>
+            </li>`;
+        }
+    }
+    
+
     function renderBalancos(requisicoes) {
         const tbody = $('#balancosTable tbody');
         tbody.empty();
         selectedDocs = [];
         atualizarContadorSelecionados();
-
+    
         requisicoes.forEach(requisicao => {
+            console.log(requisicao);
+            const confirmarRecebimentoItem = gerarItemConfirmarRecebimento(requisicao); 
+
+            const entregarItem = [2, 4].includes(requisicao.status)
+                ? `<li><a href="#" class="btnEntrega" data-doc="${requisicao.doc}">Realizar entrega</a></li>`
+                : `<li>
+                    <a class="dropdown-item disabled-link"
+                    href="#"
+                    tabindex="-1"
+                    aria-disabled="true"
+                    style="pointer-events: none; color: #aaa; cursor: not-allowed;">
+                    Realizar entrega
+                    </a>
+                </li>`;
+    
             const row = $(`
                 <tr>
                     <td><input type="checkbox" id="balanco-${requisicao.doc}" class="chk-col-blue balanco-checkbox" data-doc="${requisicao.doc}"><label for="balanco-${requisicao.doc}"> </label></td>
@@ -71,17 +103,24 @@ $(document).ready(function () {
                     <td>${requisicao.status_descricao}</td>
                     <td>${new Date(requisicao.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td>
-                      <button class="btn btn-info btnDetalhes" data-doc="${requisicao.doc}">Ver Detalhes</button>
-                      <button class="btn btn-success btnEntrega" data-doc="${requisicao.doc}">Realizar entrega</button>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Ações <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" class="btnDetalhes" data-doc="${requisicao.doc}">Ver Detalhes</a></li>
+                                ${entregarItem}
+                                ${confirmarRecebimentoItem}
+                            </ul>
+                        </div>
                     </td>
-                </tr>`
-            );
-
+                </tr>
+            `);
+    
             row.find('.btnEntrega').on('click', function () {
                 abrirModalEntrega(requisicao.doc);
             });
-            tbody.append(row);
-
+    
             row.find('.balanco-checkbox').on('change', function () {
                 const doc = $(this).data('doc');
                 if ($(this).prop('checked')) {
@@ -94,18 +133,21 @@ $(document).ready(function () {
                 atualizarContadorSelecionados();
                 console.log(selectedDocs);
             });
+    
+            tbody.append(row);
         });
-
+    
         $('#selectAll').off('click').on('click', function () {
             const isChecked = $(this).prop('checked');
             $('.balanco-checkbox').prop('checked', isChecked).trigger('change');
         });
-
+    
         $('.btnDetalhes').off('click').on('click', function () {
             const doc = $(this).data('doc');
             loadDetalhesCompras(doc);
         });
     }
+    
 
     async function loadDetalhesCompras(doc) {
         showLoader();
@@ -138,7 +180,13 @@ $(document).ready(function () {
         const tbody = $('#detalhesBalanco');
         tbody.empty();
 
-        $('#balancoModal .modal-title').text(`Requisição: ${requisicao.doc} | Solicitante: ${requisicao.solicitante_nome} | Status: ${requisicao.status_descricao}`);
+        $('#balancoModal .modal-title').html(`
+            <ul style="list-style:none; padding-left:0; margin-bottom:0;">
+                <li><strong>Requisição:</strong> ${requisicao.doc}</li>
+                <li><strong>Solicitante:</strong> ${requisicao.solicitante_nome}</li>
+                <li><strong>Status:</strong> ${requisicao.status_descricao}</li>
+            </ul>
+        `);
 
         itens.forEach(item => {
             tbody.append(`
@@ -328,32 +376,43 @@ $(document).ready(function () {
             return;
         }
     
-        const listaDocs = selectedDocs.map(doc => `<li>${doc}</li>`).join('');
-        const result = await Swal.fire({
-            title: `${acaoNome} Selecionados`,
-            html: `<p>Tem certeza que deseja <b>${acaoNome.toLowerCase()}</b> os seguintes documentos?</p><ul style='text-align:left'>${listaDocs}</ul>`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: `Sim, ${acaoNome.toLowerCase()}`,
-            cancelButtonText: 'Cancelar'
-        });
-    
-        if (!result.isConfirmed) return;
-    
-        Swal.fire({
-            title: 'Processando...',
-            text: 'Alterando status das requisições...',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
+        // Regras de transição válidas por status atual
+        const transicoesValidas = {
+            1: [2, 3],     // PEDIDO REALIZADO → APROVADA ou REPROVADA
+            2: [4],        // COMPRA APROVADA → ENTREGUE
+            4: [5, 6],     // ENTREGUE → FINALIZADA ou FINALIZADA COM CORTE
+            3: [],         // REPROVADA → não pode mudar
+            5: [],         // FINALIZADA → não pode mudar
+            6: []          // FINALIZADA COM CORTE → não pode mudar
+        };
     
         let erros = [];
         for (const doc of selectedDocs) {
             try {
                 const response = await axios.post(baseUrl, {
+                    method: 'getPurchaseRequestByDoc',
+                    token: token,
+                    data: {
+                        system_unit_id: unitId,
+                        doc: doc
+                    }
+                });
+    
+                if (!(response.data && response.data.success)) {
+                    erros.push(`${doc} (erro ao buscar status atual)`);
+                    continue;
+                }
+    
+                const statusAtual = response.data.requisicao.status;
+    
+                // Verifica se a transição é permitida
+                const permitidos = transicoesValidas[statusAtual] || [];
+                if (!permitidos.includes(statusId)) {
+                    erros.push(`${doc} (transição ${statusAtual} → ${statusId} não permitida)`);
+                    continue;
+                }
+    
+                const resultado = await axios.post(baseUrl, {
                     method: 'changeStatusRequisicao',
                     token: token,
                     data: {
@@ -363,21 +422,25 @@ $(document).ready(function () {
                         username: username
                     }
                 });
-                if (!(response.data && response.data.success)) {
-                    erros.push(doc);
+    
+                if (!(resultado.data && resultado.data.success)) {
+                    erros.push(`${doc} (falha na atualização)`);
                 }
+    
             } catch (e) {
-                erros.push(doc);
+                erros.push(`${doc} (erro inesperado)`);
             }
         }
-        Swal.close();
+    
         if (erros.length === 0) {
-            Swal.fire('Sucesso', `Todos os documentos foram ${acaoNome === 'Aprovar' ? 'aprovados' : 'reprovados'} com sucesso!`, 'success');
+            Swal.fire('Sucesso', `Todos os documentos foram ${acaoNome.toLowerCase()}s com sucesso!`, 'success');
             loadBalancos();
         } else {
-            Swal.fire('Erro', `Os seguintes documentos falharam: <ul style='text-align:left'>${erros.map(d=>`<li>${d}</li>`).join('')}</ul>`, 'error');
+            Swal.fire('Erro', `Ocorreram erros em alguns documentos:<ul style='text-align:left'>${erros.map(e => `<li>${e}</li>`).join('')}</ul>`, 'error');
         }
     }
+    
+    
     async function abrirModalEntrega(doc) {
         showLoader();
         try {
@@ -427,6 +490,7 @@ $(document).ready(function () {
 
    
    
+    $('<style>\n.disabled-link {\n  pointer-events: none;\n  color: #aaa !important;\n  background: none !important;\n  cursor: not-allowed !important;\n}\n</style>').appendTo('head');
     
     $('#btnEnviarEntrega').on('click', async function () {
         const doc = $('#modalEntrega').data('doc');
@@ -462,6 +526,64 @@ $(document).ready(function () {
             hideLoader();
         }
     });
+
+    $('#balancosTable').on('click', '.btnConfirmarRecebimento', async function () {
+        const doc = $(this).data('doc');
+    
+        try {
+            const response = await axios.post(baseUrl, {
+                method: 'getPurchaseRequestByDoc',
+                token: token,
+                data: {
+                    system_unit_id: unitId,
+                    doc: doc
+                }
+            });
+    
+            if (response.data.success && response.data.requisicao) {
+                const requisicao = response.data.requisicao;
+                const itens = response.data.itens || [];
+                const logs = response.data.logs || [];
+                const usuarioId = requisicao.usuario_id;
+    
+                const logsStatus4 = logs.filter(l => l.status === 4);
+                const userLogStatus4 = logsStatus4.find(l => l.usuario_id == username);
+    
+                if (userLogStatus4) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Atenção',
+                        text: 'O usuário que despachou não pode confirmar o recebimento.'
+                    });
+                    return;
+                }
+    
+                const todosIguais = itens.every(item => item.quantidade === item.quantidade_comprada);
+    
+                // 🟢 Aqui está o truque: força `selectedDocs` com apenas o doc atual
+                selectedDocs = [doc];
+    
+                if (todosIguais) {
+                    await handleStatusChangeSelecionados(5, 'COMPRA FINALIZADA');
+                } else {
+                    await handleStatusChangeSelecionados(6, 'COMPRA FINALIZADA COM CORTE');
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: 'Não foi possível obter os dados da requisição.'
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: 'Falha ao buscar dados da requisição.'
+            });
+        }
+    });
+    
     
 
     loadBalancos();
