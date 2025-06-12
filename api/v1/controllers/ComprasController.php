@@ -145,7 +145,7 @@ class ComprasController
             $stmtUpdate->execute([
                 ':status' => $new_status_id,
                 ':id' => $requisicao_id,
-                ':updated_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
+                ':updated_at' => date('Y-m-d H:i:s')
             ]);
 
 
@@ -223,7 +223,7 @@ class ComprasController
                     ':item_id' => $item['codigo'],
                     ':requisicao_id' => $requisicao_id,
                     ':unit_id' => $system_unit_id,
-                    ':updated_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
+                    ':updated_at' => date('Y-m-d H:i:s')
                 ]);
             }
 
@@ -235,7 +235,7 @@ class ComprasController
         ");
             $stmtUpdateReq->execute([
                 ':id' => $requisicao_id,
-                ':updated_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
+                ':updated_at' => date('Y-m-d H:i:s')
             ]);
 
             // Verifica se alguma linha foi atualizada (opcional para debug)
@@ -253,7 +253,7 @@ class ComprasController
                 ':system_unit_id' => $system_unit_id,
                 ':observacao' => 'Status alterado para: ' . $statusData['descricao'],
                 ':usuario_id' => $usuario_id,
-                ':created_at' => date('Y-m-d H:i:s', strtotime('-5 hours'))
+                ':created_at' => date('Y-m-d H:i:s')
             ]);
 
             return ['success' => true, 'message' => 'Entrega registrada com sucesso e status alterado para: ' . $statusData['descricao']];
