@@ -54,7 +54,7 @@ $(document).ready(function () {
     }
 
     function atualizarContadorSelecionados() {
-        $('#contadorSelecionados').text('Selecionados: ' + selectedDocs.length);
+        $('#contadorSelecionados').text(selectedDocs.length);
     }
 
     function gerarItemConfirmarRecebimento(requisicao) {
@@ -163,8 +163,9 @@ $(document).ready(function () {
 
             if (response.data && response.data.success) {
                 const requisicao = response.data.requisicao;
+                const logs = response.data.logs;
                 currentItems = response.data.itens;
-                renderDetalhesComprasModal(requisicao, currentItems);
+                renderDetalhesComprasModal(requisicao, currentItems,logs);
                 $('#balancoModal').modal('show');
             } else {
                 Swal.fire("Erro", "Erro ao carregar detalhes da requisição", "error");
@@ -176,7 +177,7 @@ $(document).ready(function () {
         }
     }
 
-    function renderDetalhesComprasModal(requisicao, itens) {
+    function renderDetalhesComprasModal(requisicao, itens, logs) {
         const tbody = $('#detalhesBalanco');
         tbody.empty();
 
@@ -193,6 +194,7 @@ $(document).ready(function () {
                 <tr>
                     <td>${item.produto}</td>
                     <td>${item.quantidade}</td>
+                    <td>${item.quantidade_comprada != null ? item.quantidade_comprada : '-' }</td>
                     <td>${item.preco != null ? `R$ ${item.preco.toFixed(2)}` : '-'}</td>
                 </tr>
             `);
@@ -203,6 +205,36 @@ $(document).ready(function () {
         $('#balancoModal').data('unitName', requisicao.system_unit_id);
         $('#balancoModal').data('usuario_nome', requisicao.solicitante_nome);
         $('#balancoModal').data('created_at', requisicao.created_at);
+
+
+        // Renderiza os logs no rodapé
+        if (logs && logs.length > 0) {
+            const logsOrdenados = logs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const logMensagens = logsOrdenados.map(log =>
+                `${log.observacao} por ${log.usuario_nome} em ${new Date(log.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`
+            );
+
+            const logHtml = logMensagens.map(msg => `<li>${msg}</li>`).join('');
+
+            // Remove histórico anterior, se houver
+            $('#balancoModal .modal-footer .log-historico').remove();
+
+            // Adiciona histórico colapsável antes dos botões
+            $('#balancoModal .modal-footer').prepend(`
+                <div class="log-historico" style="width: 100%; margin-bottom: 10px;">
+                    <div class="collapse mt-2" id="historicoCollapse">
+                        <ul style="list-style: none; padding-left: 0; margin-bottom: 0;">
+                            ${logMensagens.map(msg => `
+                                <li><code>${msg}</code></li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+                <br>
+            `);            
+
+        }
+
     }
 
     $('#acaoExportar').click(async function () {

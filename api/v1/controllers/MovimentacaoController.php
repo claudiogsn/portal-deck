@@ -495,7 +495,7 @@ class MovimentacaoController
             INSERT INTO requisicao_compras_log (
                 system_unit_id,requisicao_id, status, observacao, usuario_id, created_at
             ) VALUES (
-                ?,?, 1, 'Requisição criada pela loja.', ?, NOW()
+                ?,?, 1, 'Requisição criada pela loja', ?, NOW()
             )
         ");
             $stmt->execute([

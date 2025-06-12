@@ -935,6 +935,14 @@ class ModeloBalancoController
             $stmt->execute();
             $requisicoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            foreach ($requisicoes as &$req) {
+                if (!empty($req['created_at'])) {
+                    $created = new DateTime($req['created_at']);
+                    $created->modify('-5 hours');
+                    $req['created_at'] = $created->format('Y-m-d H:i:s');
+                }
+            }
+
             return ['success' => true, 'requisicoes' => $requisicoes];
         } catch (Exception $e) {
             http_response_code(500);
@@ -945,6 +953,7 @@ class ModeloBalancoController
     public static function getPurchaseRequestByDoc($system_unit_id, $doc)
     {
         global $pdo;
+        global $pdop;
 
         try {
             // 1. Buscar o cabeçalho da requisição com descrição do status
@@ -971,7 +980,7 @@ class ModeloBalancoController
 
             $requisicao_id = $requisicao['id'];
 
-            // 2. Buscar os itens da requisição com nome do produto
+            // 2. Buscar os itens da requisição
             $stmtItens = $pdo->prepare("
             SELECT
                 i.id,
@@ -994,7 +1003,7 @@ class ModeloBalancoController
             ]);
             $itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
 
-            // 3. Buscar o histórico de logs com descrição do status
+            // 3. Buscar os logs
             $stmtLogs = $pdo->prepare("
             SELECT
                 l.id,
@@ -1013,6 +1022,37 @@ class ModeloBalancoController
                 ':system_unit_id' => $system_unit_id
             ]);
             $logs = $stmtLogs->fetchAll(PDO::FETCH_ASSOC);
+
+            // 4. Buscar nomes dos usuários no outro banco
+            $userIds = array_unique(array_column($logs, 'usuario_id'));
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+
+            $userNamesMap = [];
+            if (!empty($userIds)) {
+                $stmtUsers = $pdop->prepare("
+                SELECT id, name
+                FROM system_users
+                WHERE id IN ($placeholders)
+            ");
+                $stmtUsers->execute($userIds);
+                $users = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($users as $user) {
+                    $userNamesMap[$user['id']] = $user['name'];
+                }
+            }
+
+            // 5. Atribuir nome ao log
+            foreach ($logs as &$log) {
+                $log['usuario_nome'] = $userNamesMap[$log['usuario_id']] ?? 'Formulário Mobile';
+
+                // Ajustar horário do status PEDIDO REALIZADO (status = 1)
+                if ((int)$log['status'] === 1 && !empty($log['created_at'])) {
+                    $created = new DateTime($log['created_at']);
+                    $created->modify('-5 hours');
+                    $log['created_at'] = $created->format('Y-m-d H:i:s');
+                }
+            }
 
             return [
                 'success' => true,

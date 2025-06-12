@@ -92,10 +92,6 @@
                 <div class="col-md-3 text-right">
                     <button id="btnBuscar" class="btn btn-primary">Buscar</button>
                 
-                    <span id="contadorSelecionados" style="margin: 0 10px; font-weight: bold; color: #1976d2;">
-                        Selecionados: 0
-                    </span>
-                
                     <div class="btn-group">
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Ações <span class="caret"></span>
@@ -106,6 +102,7 @@
                             <li><a href="#" id="acaoRejeitar">Rejeitar Selecionados</a></li>
                         </ul>
                     </div>
+                    <button class="btn btn-primary" type="button">Selecionados <span class="badge" id="contadorSelecionados">0</span></button>
                 </div>
                 
             </div>
@@ -151,7 +148,8 @@
                             <tr>
                                 <th>Produto</th>
                                 <th>Quantidade</th>
-                                <th>Categoria</th>
+                                <th>Quantidade Comprada</th>
+                                <th>Preço</th>
                             </tr>
                         </thead>
                         <tbody id="detalhesBalanco">
@@ -160,9 +158,10 @@
                     </table>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#historicoCollapse" aria-expanded="false" aria-controls="historicoCollapse">Ver Histórico</button>
                     <button id="btnExportarModal" class="btn btn-success">Exportar Excel</button>
                     <button id="btnImprimir" class="btn btn-info">Imprimir</button>
-                    <button class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                    <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
                 </div>
             </div>
         </div>
