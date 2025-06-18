@@ -984,15 +984,19 @@ class ModeloBalancoController
             SELECT
                 i.id,
                 i.seq,
-                i.id_produto as codigo,
-                i.produto,
+                p.codigo as codigo,
+                TRIM(REPLACE(REPLACE(REPLACE(i.produto, '\n', ''), '\r', ''), '\t', '')) AS produto,
+                p.categoria,
+                c.nome as categoria_nome,
+                i.observacao,
                 i.preco,
                 i.quantidade,
                 i.quantidade_comprada,
                 i.created_at,
                 i.updated_at
             FROM requisicao_compras_itens i
-            LEFT JOIN products p ON p.codigo = i.id_produto AND p.system_unit_id = i.system_unit_id
+            LEFT JOIN products p ON p.id = i.id_produto AND p.system_unit_id = i.system_unit_id
+            LEFT JOIN categorias c ON p.categoria = c.codigo AND p.system_unit_id = c.system_unit_id
             WHERE i.requisicao_id = :requisicao_id AND i.system_unit_id = :system_unit_id
             ORDER BY i.seq ASC
             ");

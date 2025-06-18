@@ -273,6 +273,8 @@
 <div class="form-section">
     <input type="text" id="item-description" placeholder="Clique para selecionar um produto" onclick="abrirModal()" readonly />
     <input type="hidden" id="item-unit" />
+    <input type="text" id="observacao" placeholder="Observação" />
+
 
     <div class="price-info">
         <span>Preço unitário: <span id="preco-label">R$ 0,00</span></span>
@@ -316,6 +318,18 @@
         unidade: null,
         preco: 0
     };
+
+    function mostrarObservacao(el) {
+        const obs = el.dataset.observacao;
+        if (!obs) return;
+
+        Swal.fire({
+            title: 'Observação do Item',
+            text: obs,
+            icon: 'info',
+            confirmButtonText: 'Fechar'
+        });
+    }
 
     // Funções globais para o modal
     function abrirModal() {
@@ -508,16 +522,21 @@
 
             const total = quantidade * selectedItem.preco;
 
-            // Adicionar à tabela
+            const observacao = document.getElementById('observacao').value.trim();
+
             const row = document.createElement('div');
             row.className = 'grid-row';
             row.dataset.idProduto = selectedItem.id;
+            row.dataset.observacao = observacao;
             row.innerHTML = `
-                <div>${selectedItem.descricao}</div>
+                <div onclick="mostrarObservacao(this)" class="item-descricao" data-observacao="${observacao || ''}">
+                    ${selectedItem.descricao}
+                </div>
                 <div>${quantidade} ${selectedItem.unidade}</div>
                 <div>${formatarMoeda(total)}</div>
                 <div><div class="action-btn action-btn-danger" onclick="removerItem(this)">X</div></div>
             `;
+
             document.getElementById('result-table-body').appendChild(row);
 
             // Limpar campos
@@ -525,6 +544,8 @@
             document.getElementById('preco-label').textContent = 'R$ 0,00';
             document.getElementById('item-quantity').value = '';
             document.getElementById('total-label').textContent = 'R$ 0,00';
+            document.getElementById('observacao').value = '';
+
             selectedItem = {
                 id: null,
                 codigo: null,
@@ -536,6 +557,8 @@
             // Atualizar total
             atualizarTotalizador();
         });
+
+
 
         async function loadItemsByTag() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -588,11 +611,14 @@
                 const precoTexto = row.querySelector('div:nth-child(3)').textContent
                     .replace('R$', '').replace(',', '.').trim();
                 const preco = parseFloat(precoTexto);
+                const observacao = row.dataset.observacao || '';
+
 
                 if (id_produto && produto && !isNaN(quantidade)) {
                     items.push({
                         id_produto,
                         produto,
+                        observacao,
                         seq: index + 1,
                         quantidade,
                         preco

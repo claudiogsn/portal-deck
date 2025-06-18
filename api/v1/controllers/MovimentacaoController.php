@@ -474,9 +474,9 @@ class MovimentacaoController
 
                 $stmt = $pdo->prepare("
                 INSERT INTO requisicao_compras_itens (
-                   system_unit_id,requisicao_id, id_produto, produto, seq, preco, quantidade, quantidade_comprada, created_at, updated_at
+                   system_unit_id,requisicao_id, id_produto, produto,observacao, seq, preco, quantidade, quantidade_comprada, created_at, updated_at
                 ) VALUES (
-                    ?,?, ?, ?, ?, ?, ?, NULL, NOW(), NOW()
+                    ?,?, ?, ?,?, ?, ?, ?, NULL, NOW(), NOW()
                 )
             ");
                 $stmt->execute([
@@ -484,6 +484,7 @@ class MovimentacaoController
                     $requisicao_id,
                     $item['id_produto'],
                     $item['produto'],
+                    $item['observacao'] ?? '',
                     $item['seq'],
                     isset($item['preco']) ? $item['preco'] : null,
                     $item['quantidade']

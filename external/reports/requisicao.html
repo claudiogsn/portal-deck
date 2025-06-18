@@ -76,23 +76,30 @@
   <hr>
 
   <table>
-    <thead>
+   <thead>
       <tr>
         <th>#</th>
         <th>Produto</th>
+        <th>Categoria</th>
         <th>Quantidade</th>
         <th>Preço</th>
       </tr>
     </thead>
+
     <tbody>
-      ${itens.map((item, i) => `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${item.produto}</td>
-          <td>${item.quantidade}</td>
-          <td>${formatarValor(item.preco)}</td>
-        </tr>
-      `).join('')}
+     ${itens.map((item, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>
+              ${item.produto}
+              ${item.observacao ? `<br><small><strong>Observação:</strong> ${item.observacao}</small>` : ''}
+            </td>
+            <td>${item.categoria_nome || '-'}</td>
+            <td>${item.quantidade}</td>
+            <td>${formatarValor(item.preco)}</td>
+          </tr>
+        `).join('')}
+
       <tr>
         <td colspan="3" style="text-align: right; font-weight: bold;">TOTAL</td>
         <td style="font-weight: bold;">${formatarValor(totalGeral)}</td>

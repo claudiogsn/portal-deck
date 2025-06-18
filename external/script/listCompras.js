@@ -193,7 +193,9 @@ $(document).ready(function () {
             tbody.append(`
                 <tr>
                     <td>${item.produto}</td>
+                    <td>${item.observacao}</td>
                     <td>${item.quantidade}</td>
+                    <td>${item.categoria_nome}</td>
                     <td>${item.quantidade_comprada != null ? item.quantidade_comprada : '-' }</td>
                     <td>${item.preco != null ? `R$ ${item.preco.toFixed(2)}` : '-'}</td>
                 </tr>
@@ -331,7 +333,9 @@ $(document).ready(function () {
             const itensFiltrados = currentItems.map(item => ({
                 seq: item.seq,
                 codigo: item.codigo,
+                observacao: item.observacao,
                 produto: item.produto,
+                categoria: item.categoria_nome,
                 quantidade: item.quantidade,
                 preco: item.preco != null ? item.preco.toFixed(2) : '-'
             }));
