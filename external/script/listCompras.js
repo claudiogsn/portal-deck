@@ -333,7 +333,7 @@ $(document).ready(function () {
             const itensFiltrados = currentItems.map(item => ({
                 seq: item.seq,
                 codigo: item.codigo,
-                observacao: item.item.observacao != null ? item.observacao: '-',
+                observacao: item.observacao != null ? item.observacao: '-',
                 produto: item.produto,
                 categoria: item.categoria_nome,
                 quantidade: item.quantidade,
