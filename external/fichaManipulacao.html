@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Fichas de Manipulação</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="bsb/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+    <link href="bsb/css/style.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="bsb/plugins/multi-select/css/multi-select.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="bsb/plugins/multi-select/js/jquery.multi-select.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.quicksearch/2.4.0/jquery.quicksearch.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</head>
+<body class="theme-blue">
+<div class="container-fluid">
+    <br>
+    <div class="card">
+        <div class="header"><h2>Fichas de Manipulação</h2></div>
+
+        <div class="row" style="margin: 15px 0;">
+            <div class="col-md-4">
+                <input type="text" id="filtroNome" class="form-control" placeholder="Filtrar por nome do produto">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-success" onclick="abrirModalNovaFicha()">
+                    <i class="fa fa-plus"></i> Nova Ficha
+                </button>
+            </div>
+        </div>
+
+        <div class="body">
+            <table class="table table-striped" id="tabela-fichas">
+                <thead>
+                <tr>
+                    <th>Ações</th>
+                    <th>ID</th>
+                    <th>Produto</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ficha de Manipulação -->
+<div class="modal fade" id="modalFicha" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header"><h4 class="modal-title">Ficha de Manipulação</h4></div>
+            <div class="modal-body">
+                <input type="hidden" id="fichaId">
+                <div class="form-group">
+                    <label>Produto Principal (matéria-prima)</label>
+                    <select id="selectPrincipal" class="form-control" style="width: 100%"></select>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <label>Selecionar Insumos</label>
+                        <select multiple="multiple" id="selectInsumos" class="form-control"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="salvarFicha()">Salvar</button>
+                <button class="btn btn-default" data-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const baseUrl = window.location.hostname !== 'localhost'
+        ? 'https://portal.vemprodeck.com.br/api/v1/index.php'
+        : 'http://localhost/portal-deck/api/v1/index.php';
+
+    const system_unit_id = new URLSearchParams(window.location.search).get('system_unit_id');
+    const token = new URLSearchParams(window.location.search).get('token');
+
+    let fichas = [];
+    let produtosPorCategoria = [];
+
+    $(document).ready(() => {
+        carregarFichas();
+        $('#filtroNome').on('input', aplicarFiltro);
+    });
+
+    function carregarFichas() {
+        axios.post(baseUrl, {
+            method: 'listarFichas',
+            token,
+            data: { system_unit_id }
+        }).then(res => {
+            fichas = res.data.data || [];
+            aplicarFiltro();
+        }).catch(() => {
+            Swal.fire('Erro', 'Erro ao carregar fichas', 'error');
+        });
+    }
+
+    function aplicarFiltro() {
+        const filtro = $('#filtroNome').val().toLowerCase();
+        const tbody = $('#tabela-fichas tbody');
+        tbody.empty();
+
+        fichas.filter(f => f.nome_produto.toLowerCase().includes(filtro)).forEach(f => {
+            const statusLabel = f.status == 1
+                ? '<span class="label label-success">Ativo</span>'
+                : '<span class="label label-default">Inativo</span>';
+
+            const row = `
+      <tr>
+        <td>
+          <a href="#" onclick="editarFicha(${f.id})" title="Editar"><i class="fa fa-edit text-info"></i></a>
+          &nbsp;
+          <a href="#" onclick="alterarStatusFicha(${f.id})" title="Ativar/Desativar"><i class="fa fa-power-off orange"></i></a>
+        </td>
+        <td>${f.id}</td>
+        <td>${f.nome_produto}</td>
+        <td>${statusLabel}</td>
+      </tr>`;
+            tbody.append(row);
+        });
+    }
+
+    async function abrirModalNovaFicha() {
+        $('#modalFicha').modal('show');
+        $('#fichaId').val('');
+
+        try { $('#selectInsumos').multiSelect('destroy'); } catch (e) {}
+        $('#selectPrincipal').empty();
+        $('#selectInsumos').empty();
+
+        Swal.fire({ title: 'Carregando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        try {
+            const res = await axios.post(baseUrl, {
+                method: 'listProductsByCategory',
+                token,
+                data: { unit_id: system_unit_id }
+            });
+
+            const produtos = res.data.products_by_category.flatMap(cat => cat.itens);
+
+            for (const p of produtos) {
+                const option = new Option(`${p.codigo} - ${p.nome}`, p.codigo);
+                $('#selectPrincipal').append(option);
+                $('#selectInsumos').append(option.cloneNode(true));
+            }
+
+            // Ativa Select2 no principal
+            $('#selectPrincipal').select2({ dropdownParent: $('#modalFicha') });
+
+            // Ativa MultiSelect com busca
+            $('#selectInsumos').multiSelect({
+                selectableHeader: "<input type='text' class='form-control' autocomplete='off' placeholder='Buscar'>",
+                selectionHeader: "<div class='text-center'>Selecionados</div>",
+                afterInit: function(ms) {
+                    const that = this,
+                        $selectableSearch = that.$selectableUl.prev(),
+                        selectableSearchString = '#' + that.$container.attr('id') + ' .ms-elem-selectable:not(.ms-selected)';
+                    that.qs1 = $selectableSearch.quicksearch(selectableSearchString).on('keydown', function(e) {
+                        if (e.which === 40) {
+                            that.$selectableUl.focus();
+                            return false;
+                        }
+                    });
+                },
+                afterSelect: () => $('#selectInsumos').focus(),
+                afterDeselect: () => $('#selectInsumos').focus()
+            });
+
+            Swal.close();
+        } catch {
+            Swal.fire('Erro', 'Erro ao carregar insumos', 'error');
+        }
+    }
+
+    function salvarFicha() {
+        const produto_principal = $('#selectPrincipal').val();
+        const produto_nome = $('#selectPrincipal option:selected').text();
+        const insumos = $('#selectInsumos').val() || [];
+
+        if (!produto_principal || insumos.length === 0) {
+            Swal.fire('Erro', 'Selecione um produto principal e ao menos um insumo.', 'warning');
+            return;
+        }
+
+        Swal.fire({ title: 'Salvando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        axios.post(baseUrl, {
+            method: 'saveFicha',
+            token,
+            data: {
+                system_unit_id,
+                codigo_produto: parseInt(produto_principal),
+                nome_produto: produto_nome,
+                insumos: insumos.map(i => parseInt(i))
+            }
+        }).then(() => {
+            Swal.close();
+            $('#modalFicha').modal('hide');
+            carregarFichas();
+        }).catch(() => {
+            Swal.fire('Erro', 'Erro ao salvar ficha', 'error');
+        });
+    }
+
+    function editarFicha(id) {
+        Swal.fire('Atenção', 'Edição de ficha será implementada na próxima etapa.', 'info');
+    }
+
+    function alterarStatusFicha(id) {
+        Swal.fire({
+            title: 'Alterar status?',
+            text: 'Deseja ativar ou desativar esta ficha?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sim',
+            cancelButtonText: 'Cancelar'
+        }).then(result => {
+            if (result.isConfirmed) {
+                axios.post(baseUrl, {
+                    method: 'toggleStatusFicha',
+                    token,
+                    data: {
+                        id,
+                        system_unit_id
+                    }
+                }).then(() => {
+                    carregarFichas();
+                }).catch(() => {
+                    Swal.fire('Erro', 'Erro ao alterar status', 'error');
+                });
+            }
+        });
+    }
+</script>
+</body>
+</html>

@@ -6,12 +6,6 @@ require_once __DIR__ . '/../database/db-permission.php';
 
 class ComprasController
 {
-    /**
-     * Lista todas as requisições de compras da unidade.
-     *
-     * @param int $system_unit_id ID da unidade do sistema.
-     * @return array Resultado com status, dados ou mensagem de erro.
-     */
     public static function listarRequisicoes($system_unit_id)
     {
         global $pdo, $pdop;
@@ -48,13 +42,6 @@ class ComprasController
         }
     }
 
-    /**
-     * Lista os itens de uma requisição específica da unidade.
-     *
-     * @param int $requisicao_id ID da requisição.
-     * @param int $system_unit_id ID da unidade do sistema.
-     * @return array Resultado com status, dados ou mensagem de erro.
-     */
     public static function listarItensDaRequisicao($requisicao_id, $system_unit_id)
     {
         global $pdo;
@@ -77,13 +64,6 @@ class ComprasController
         }
     }
 
-    /**
-     * Lista o histórico (log) de uma requisição da unidade.
-     *
-     * @param int $requisicao_id ID da requisição.
-     * @param int $system_unit_id ID da unidade do sistema.
-     * @return array Resultado com status, dados ou mensagem de erro.
-     */
     public static function listarLogDaRequisicao($requisicao_id, $system_unit_id)
     {
         global $pdo;

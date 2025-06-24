@@ -30,6 +30,7 @@ require_once 'controllers/MovimentacaoController.php';
 require_once 'controllers/ModeloBalancoController.php';
 require_once 'controllers/BiController.php';
 require_once 'controllers/ComprasController.php';
+require_once 'controllers/ManipulacaoController.php';
 
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -47,7 +48,28 @@ if (isset($data['method']) && isset($data['data'])) {
     if (isset($data['token'])){$requestToken = $data['token'];}
 
     // Métodos que não precisam de autenticação
-    $noAuthMethods = ['validateCPF', 'validateCNPJ','getModelByTag','getModelByTagCompras','saveBalanceItems','saveComprasItems','getUnitsByGroup','registerJobExecution','persistSales','consolidateSalesByGroup'];
+    $noAuthMethods = ['validateCPF',
+        'listarFichas',
+        'listarItensFicha',
+        'listarMovimentacoes',
+        'listarItensMovimentacao',
+        'listarAnexosMovimentacao',
+        'registrarMovimentacao',
+        'saveFicha',
+        'toggleStatusFicha',
+        'getFichasByUser',
+        'saveUsuariosPorFicha',
+        'listarUsuariosDaFicha',
+        'registrarAnexoMovimentacao',
+        'validateCNPJ',
+        'getModelByTag',
+        'getModelByTagCompras',
+        'saveBalanceItems',
+        'saveComprasItems',
+        'getUnitsByGroup',
+        'registerJobExecution',
+        'persistSales',
+        'consolidateSalesByGroup'];
 
     if (!in_array($method, $noAuthMethods)) {
         if (!isset($requestToken)) {
@@ -61,6 +83,120 @@ if (isset($data['method']) && isset($data['data'])) {
 
     try {
         switch ($method) {
+            // Métodos para ManipulacaoController
+            case 'listarFichas':
+                if (isset($requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::listarFichas($requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro system_unit_id ausente'];
+                }
+                break;
+
+            case 'listarItensFicha':
+                if (isset($requestData['id_ficha'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::listarItensFicha($requestData['id_ficha'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros id_ficha e/ou system_unit_id ausentes'];
+                }
+                break;
+
+            case 'listarMovimentacoes':
+                if (isset($requestData['id_ficha'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::listarMovimentacoes($requestData['id_ficha'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros id_ficha e/ou system_unit_id ausentes'];
+                }
+                break;
+
+            case 'listarItensMovimentacao':
+                if (isset($requestData['documento'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::listarItensMovimentacao($requestData['documento'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros documento e/ou system_unit_id ausentes'];
+                }
+                break;
+
+            case 'listarAnexosMovimentacao':
+                if (isset($requestData['documento'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::listarAnexosMovimentacao($requestData['documento'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros documento e/ou system_unit_id ausentes'];
+                }
+                break;
+
+            case 'registrarMovimentacao':
+                if (isset($requestData)) {
+                    $response = ManipulacaoController::registrarMovimentacao($requestData);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro data ausente'];
+                }
+                break;
+
+            case 'saveFicha':
+                if (isset($requestData)) {
+                    $response = ManipulacaoController::saveFicha($requestData);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro data ausente'];
+                }
+                break;
+
+            case 'toggleStatusFicha':
+                if (isset($requestData['id'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::toggleStatusFicha($requestData['id'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros id e/ou system_unit_id ausentes'];
+                }
+                break;
+
+            case 'getFichasByUser':
+                if (isset($requestData['user_id'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::getFichasByUser($requestData['user_id'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros user_id e/ou system_unit_id ausentes'];
+                }
+                break;
+
+            case 'saveUsuariosPorFicha':
+                if (isset($requestData['ficha_id'], $requestData['usuarios'])) {
+                    $response = ManipulacaoController::saveUsuariosPorFicha($requestData['ficha_id'], $requestData['usuarios']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros ficha_id e/ou usuarios ausentes'];
+                }
+                break;
+
+            case 'listarUsuariosDaFicha':
+                if (isset($requestData['ficha_id'])) {
+                    $response = ManipulacaoController::listarUsuariosDaFicha($requestData['ficha_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro ficha_id ausente'];
+                }
+                break;
+
+            case 'registrarAnexoMovimentacao':
+                if (isset($requestData['documento'], $requestData['system_unit_id'], $requestData['url'])) {
+                    $descricao = $requestData['descricao'] ?? null;
+                    $response = ManipulacaoController::registrarAnexoMovimentacao(
+                        $requestData['documento'],
+                        $requestData['system_unit_id'],
+                        $requestData['url'],
+                        $descricao
+                    );
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros documento, system_unit_id e/ou url ausentes'];
+                }
+                break;
             // Métodos para BiController
             case 'getUnitsByGroup':
                 if (isset($requestData['group_id'])) {
@@ -82,7 +218,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     ];
                 }
                 break;
-
             case 'consolidateSalesByUnit':
                 if (isset($requestData['system_unit_id'], $requestData['dt_inicio'], $requestData['dt_fim'])) {
                     $response = BiController::consolidateSalesByUnit($requestData['system_unit_id'], $requestData['dt_inicio'], $requestData['dt_fim']);
@@ -91,7 +226,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros system_unit_id, dt_inicio ou dt_fim ausentes'];
                 }
                 break;
-
             case 'consolidateSalesByGroup':
                 if (isset($requestData['group_id'], $requestData['dt_inicio'], $requestData['dt_fim'])) {
                     $response = BiController::consolidateSalesByGroup($requestData['group_id'], $requestData['dt_inicio'], $requestData['dt_fim']);
@@ -100,8 +234,7 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros group_id, dt_inicio ou dt_fim ausentes'];
                 }
                 break;
-
-                case 'persistSales':
+            case 'persistSales':
                     if (isset($requestData)) {
                         $response = BiController::persistSales($requestData);
                     } else {
@@ -109,7 +242,6 @@ if (isset($data['method']) && isset($data['data'])) {
                         $response = ['error' => 'Parâmetro sales ausente'];
                     }
                     break;
-
             // Métodos para InsumoController
             case 'getInsumosUsage':
                 if (isset($requestData['system_unit_id'])) {
@@ -119,24 +251,22 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
-                case 'getInsumoConsumption':
-                    if (isset($requestData['system_unit_id']) && isset($requestData['dates']) && isset($requestData['productCodes'])) {
-                        $response = NecessidadesController::getInsumoConsumption($requestData['system_unit_id'], $requestData['dates'], $requestData['productCodes']);
-                    } else {
-                        http_response_code(400);
-                        $response = ['error' => 'Parâmetros system_unit_id, dates ou productCodes ausentes'];
-                    }
-                    break;
-
-                    case 'getFiliaisByMatriz':
-                        if (isset($requestData['unit_matriz_id'])) {
-                            $response = NecessidadesController::getFiliaisByMatriz($requestData['unit_matriz_id']);
-                        } else {
-                            http_response_code(400);
-                            $response = ['error' => 'Parâmetro $unit_matriz_id ausente'];
-                        }
-                        break;
+            case 'getInsumoConsumption':
+                if (isset($requestData['system_unit_id']) && isset($requestData['dates']) && isset($requestData['productCodes'])) {
+                    $response = NecessidadesController::getInsumoConsumption($requestData['system_unit_id'], $requestData['dates'], $requestData['productCodes']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros system_unit_id, dates ou productCodes ausentes'];
+                }
+                break;
+            case 'getFiliaisByMatriz':
+                if (isset($requestData['unit_matriz_id'])) {
+                    $response = NecessidadesController::getFiliaisByMatriz($requestData['unit_matriz_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro $unit_matriz_id ausente'];
+                }
+                break;
             // Métodos para ComposicaoController
             case 'createComposicao':
                 $response = ComposicaoController::createComposicao($requestData);
@@ -165,7 +295,7 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-                case 'listFichaTecnica':
+            case 'listFichaTecnica':
                 if (isset($requestData['unit_id']) && isset($requestData['product_id'])) {
                     $response = ComposicaoController::listFichaTecnica($requestData['product_id'],$requestData['unit_id']);
                 } else {
@@ -173,7 +303,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros unit_id ou product_id ausente'];
                 }
                     break;
-
             // Métodos para ModeloBalancoController
             case 'createModelo':
                 if (isset($requestData['nome']) && isset($requestData['usuario_id']) && isset($requestData['itens'])) {
@@ -223,7 +352,7 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros obrigatórios ausentes'];
                 }
                 break;
-                case 'getPurchaseRequestByDoc':
+            case 'getPurchaseRequestByDoc':
                     if (isset($requestData['system_unit_id']) && isset($requestData['doc']) ) {
                         $response = ModeloBalancoController::getPurchaseRequestByDoc($requestData['system_unit_id'],$requestData['doc']);
                     } else {
@@ -258,7 +387,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros modelo_id ou produto_id ausente'];
                 }
                 break;
-
             case 'getModelByTag':
                 if (isset($requestData['tag'])) {
                     $response = ModeloBalancoController::getModelByTag($requestData['tag']);
@@ -283,7 +411,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro system_unit_id ausente'];
                 }
                 break;
-
             case 'listarItensDaRequisicao':
                 if (isset($requestData['requisicao_id']) && isset($requestData['system_unit_id'])) {
                     $response = ComprasController::listarItensDaRequisicao($requestData['requisicao_id'], $requestData['system_unit_id']);
@@ -292,7 +419,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros requisicao_id ou system_unit_id ausente'];
                 }
                 break;
-
             case 'listarLogDaRequisicao':
                 if (isset($requestData['requisicao_id']) && isset($requestData['system_unit_id'])) {
                     $response = ComprasController::listarLogDaRequisicao($requestData['requisicao_id'], $requestData['system_unit_id']);
@@ -314,7 +440,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros doc, system_unit_id, status_id ou username ausentes'];
                 }
                 break;
-
             case 'realizarEntrega':
                 if (
                     isset($requestData['doc'], $requestData['system_unit_id'], $requestData['username'], $requestData['itens'])
@@ -331,10 +456,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros doc, system_unit_id, username ou itens ausentes ou inválidos'];
                 }
                 break;
-
-
-
-
             case  'saveBalanceItems':
                 if (isset($requestData['system_unit_id']) && isset($requestData['itens'])) {
                     $response = MovimentacaoController::saveBalanceItems($requestData);
@@ -351,8 +472,7 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros system_unit_id ou itens ausente'];
                 }
                 break;
-
-                case 'listBalance':
+            case 'listBalance':
                     if (isset($requestData['system_unit_id'])) {
                         // Verifica se as datas estão presentes e as atribui, caso contrário passa null
                         $data_inicial = isset($requestData['data_inicial']) ? $requestData['data_inicial'] : null;
@@ -378,8 +498,7 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro system_unit_id ausente'];
                 }
                 break;
-
-                case 'getBalanceByDoc':
+            case 'getBalanceByDoc':
                     if (isset($requestData['system_unit_id']) && isset($requestData['doc'])) {
                         $response = MovimentacaoController::getBalanceByDoc($requestData['system_unit_id'], $requestData['doc']);
                     } else {
@@ -395,12 +514,9 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro system_unit_id ou doc ausente'];
                 }
                 break;
-                case 'createTransferItems':
+            case 'createTransferItems':
                     $response = MovimentacaoController::createTransferItems($requestData);
                     break;
-
-                
-
             // Métodos para DashboardController
             case 'getDashboardData':
                 if (isset($requestData['unit_id'])) {
@@ -410,7 +526,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             // Métodos para EstoqueController
             case 'createEstoque':
                 $response = EstoqueController::createEstoque($requestData);
@@ -439,7 +554,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             // Métodos para FornecedoresController
             case 'createFornecedor':
                 $response = FornecedoresController::createFornecedor($requestData);
@@ -496,7 +610,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             // Métodos para ProductionController
             case 'createProduction':
                 if (isset($requestData['unit_id'])) {
@@ -506,7 +619,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             case 'updateProduction':
                 if (isset($requestData['unit_id'])) {
                     if (isset($requestData['id'])) {
@@ -520,7 +632,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             case 'getProductionById':
                 if (isset($requestData['unit_id'])) {
                     if (isset($requestData['id'])) {
@@ -534,7 +645,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             case 'listProductions':
                 if (isset($requestData['unit_id'])) {
                     $response = ProductionController::listProductions($requestData['unit_id']);
@@ -543,8 +653,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
-
             // Métodos para SalesController
             case 'createSale':
                 $response = SalesController::createSale($requestData);
@@ -573,7 +681,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             // Métodos para TransfersController
             case 'createTransfer':
                 $response = TransfersController::createTransfer($requestData);
@@ -602,7 +709,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             // Métodos para ProductController
             case 'createProduct':
                 $response = ProductController::createProduct($requestData);
@@ -631,7 +737,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             case 'listModelosWithProducts':
                 if (isset($requestData['unit_id'])) {
                     $response = ModeloBalancoController::listModelosWithProducts($requestData['unit_id']);
@@ -648,8 +753,7 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
-                case 'toggleModeloStatus':
+             case 'toggleModeloStatus':
                    
                     if (isset($requestData['unit_id'])) {
                         $response = ModeloBalancoController::toggleModeloStatus($requestData['unit_id'],$requestData['tag'],$requestData['status']);
@@ -667,7 +771,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro ausentes'];
                 }
                 break;
-                    
             case 'getProductCards':
                 if (isset ($requestData['system_unit_id'])){
                         $response = ProductController::getProductCards($requestData['system_unit_id']);
@@ -692,8 +795,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     ];
                 }
                 break;
-
-
             case 'listProductsByCategory':
                 //print_r($requestData);
                 //exit();
@@ -704,7 +805,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             // Métodos para CategoriesController
             case 'createCategoria':
                 if (isset($requestData['unit_id'])) { // Verifica se o unit_id está presente
@@ -714,7 +814,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             case 'listInsumos':
                 if (isset($requestData['unit_id'])) {
                     $response = ProductController::listInsumos($requestData['unit_id']);
@@ -723,8 +822,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
-
             case 'updateCategoria':
                 if (isset($requestData['unit_id'])) { // Verifica se o unit_id está presente
                     if (isset($requestData['id'])) {
@@ -738,7 +835,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             case 'getCategoriaById':
                 if (isset($requestData['unit_id'])) { // Verifica se o unit_id está presente
                     if (isset($requestData['id'])) {
@@ -752,7 +848,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             case 'listCategorias':
                 if (isset($requestData['unit_id'])) { // Verifica se o unit_id está presente
                     $response = CategoriesController::listCategorias($requestData['unit_id']);
@@ -761,17 +856,14 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro unit_id ausente'];
                 }
                 break;
-
             // Métodos para ProductController
             case 'createMovimentacao':
                 $response = MovimentacaoController::createMovimentacao($requestData);
                 break;
-
             case 'createMovimentacaoMassa':
                 //$response = $requestData;
                 $response = MovimentacaoController::createMovimentacaoMassa($requestData);
                 break;
-
             case 'updateMovimentacao':
                 if (isset($requestData['id']) && isset($requestData['system_unit_id'])) {
                     $response = MovimentacaoController::updateMovimentacao($requestData['id'], $requestData, $requestData['system_unit_id']);
@@ -780,7 +872,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro id ou system_unit_id ausente'];
                 }
                 break;
-
             case 'getMovimentacaoById':
                 if (isset($requestData['id']) && isset($requestData['system_unit_id'])) {
                     $response = MovimentacaoController::getMovimentacaoById($requestData['id'], $requestData['system_unit_id']);
@@ -789,7 +880,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro id ou system_unit_id ausente'];
                 }
                 break;
-
             case 'getMovimentacaoByDoc':
                 if (isset($requestData['doc']) && isset($requestData['system_unit_id'])) {
                     $response = MovimentacaoController::getMovimentacaoByDoc($requestData['system_unit_id'], $requestData['doc']);
@@ -798,7 +888,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro doc ou system_unit_id ausente'];
                 }
                 break;
-
             case 'deleteMovimentacao':
                 if (isset($requestData['id']) && isset($requestData['system_unit_id'])) {
                     $response = MovimentacaoController::deleteMovimentacao($requestData['id'], $requestData['system_unit_id']);
@@ -807,7 +896,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro id ou system_unit_id ausente'];
                 }
                 break;
-
             case 'listMovimentacoes':
                 if (isset($requestData['system_unit_id'])) {
                     $response = MovimentacaoController::listMovimentacoes($requestData['system_unit_id']);
@@ -816,7 +904,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro system_unit_id ausente'];
                 }
                 break;
-
             case 'getLastMov':
                 if (isset($requestData['system_unit_id']) && isset($requestData['tipo'])) {
                     $response = MovimentacaoController::getLastMov($requestData['system_unit_id'], $requestData['tipo']);
@@ -825,7 +912,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro system_unit_id ou tipo ausente'];
                 }
                 break;
-
             case 'validateTagExists':
                 if (isset($requestData['tag'])) {
                     $response = ModeloBalancoController::validateTagExists($requestData['tag']);
@@ -842,9 +928,6 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro tag ausente'];
                 }
                 break;
-
-
-
             default:
                 http_response_code(405);
                 $response = ['error' => 'Método não suportado'];
