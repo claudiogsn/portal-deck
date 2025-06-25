@@ -111,6 +111,15 @@ if (isset($data['method']) && isset($data['data'])) {
                 }
                 break;
 
+            case 'getFichaDetalhada':
+                if (isset($requestData['id_ficha'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::getFichaDetalhada($requestData['id_ficha'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros id_ficha e/ou system_unit_id ausentes'];
+                }
+                break;
+
             case 'listarItensMovimentacao':
                 if (isset($requestData['documento'], $requestData['system_unit_id'])) {
                     $response = ManipulacaoController::listarItensMovimentacao($requestData['documento'], $requestData['system_unit_id']);
@@ -166,8 +175,8 @@ if (isset($data['method']) && isset($data['data'])) {
                 break;
 
             case 'saveUsuariosPorFicha':
-                if (isset($requestData['ficha_id'], $requestData['usuarios'])) {
-                    $response = ManipulacaoController::saveUsuariosPorFicha($requestData['ficha_id'], $requestData['usuarios']);
+                if (isset($requestData['ficha_id'], $requestData['user_ids'])) {
+                    $response = ManipulacaoController::saveUsuariosPorFicha($requestData['ficha_id'], $requestData['user_ids']);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetros ficha_id e/ou usuarios ausentes'];
@@ -182,6 +191,10 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro ficha_id ausente'];
                 }
                 break;
+
+                case 'getUsuariosEstoqueManipulacao':
+                    $response = ManipulacaoController::getUsuariosEstoqueManipulacao();
+                    break;
 
             case 'registrarAnexoMovimentacao':
                 if (isset($requestData['documento'], $requestData['system_unit_id'], $requestData['url'])) {

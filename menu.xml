@@ -50,6 +50,10 @@
           </menuitem>
         </menu>
       </menuitem>
+      <menuitem label="Fichas de Manipulação">
+        <action>FichaManipulacao</action>
+        <icon>fas:list fa-fw</icon>
+      </menuitem>
       <menuitem label="Compras">
         <icon>fas:shopping-cart fa-fw</icon>
         <menu>

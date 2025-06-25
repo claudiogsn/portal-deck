@@ -163,47 +163,77 @@ class ManipulacaoController
         global $pdo;
 
         try {
+            $pdo->beginTransaction();
+
+            $now = date('Y-m-d H:i:s');
+
             if (!empty($data['id'])) {
-                // Atualizar ficha existente
+                // Atualizar ficha
                 $stmt = $pdo->prepare("
-                    UPDATE ficha_manipulacao
-                    SET nome_produto = :nome_produto,
-                        descarte = 0,
-                        updated_at = :updated_at
-                    WHERE id = :id AND system_unit_id = :system_unit_id
-                ");
+                UPDATE ficha_manipulacao
+                SET nome_produto = :nome_produto, updated_at = :updated_at
+                WHERE id = :id AND system_unit_id = :system_unit_id
+            ");
                 $stmt->execute([
                     ':nome_produto' => $data['nome_produto'],
-                    ':updated_at' => date('Y-m-d H:i:s'),
+                    ':updated_at' => $now,
                     ':id' => $data['id'],
                     ':system_unit_id' => $data['system_unit_id']
                 ]);
-                return ['success' => true, 'message' => 'Ficha atualizada com sucesso.'];
+
+                // Remove insumos antigos
+                $stmt = $pdo->prepare("DELETE FROM ficha_manipulacao_itens WHERE id_ficha = :id AND system_unit_id = :unit_id");
+                $stmt->execute([
+                    ':id' => $data['id'],
+                    ':unit_id' => $data['system_unit_id']
+                ]);
+
+                $fichaId = $data['id'];
             } else {
-                // Nova ficha
+                // Inserir nova ficha
                 $stmt = $pdo->prepare("
-                    INSERT INTO ficha_manipulacao (
-                        system_unit_id, codigo_produto, nome_produto,
-                        descarte, created_at, updated_at, status
-                    ) VALUES (
-                        :system_unit_id, :codigo_produto, :nome_produto,
-                        :descarte, :created_at, :updated_at, 1
-                    )
-                ");
+                INSERT INTO ficha_manipulacao (
+                    system_unit_id, codigo_produto, nome_produto, created_at, updated_at, status
+                ) VALUES (
+                    :system_unit_id, :codigo_produto, :nome_produto, :created_at, :updated_at, 1
+                )
+            ");
                 $stmt->execute([
                     ':system_unit_id' => $data['system_unit_id'],
                     ':codigo_produto' => $data['codigo_produto'],
                     ':nome_produto' => $data['nome_produto'],
-                    ':descarte' => $data['descarte'],
-                    ':created_at' => date('Y-m-d H:i:s'),
-                    ':updated_at' => date('Y-m-d H:i:s')
+                    ':created_at' => $now,
+                    ':updated_at' => $now
                 ]);
-                return ['success' => true, 'message' => 'Ficha criada com sucesso.'];
+
+                $fichaId = $pdo->lastInsertId();
             }
+
+            // Inserir os insumos
+            if (!empty($data['insumos'])) {
+                $stmt = $pdo->prepare("
+                INSERT INTO ficha_manipulacao_itens (system_unit_id, id_ficha,codigo_insumo)
+                VALUES (:system_unit_id, :id_ficha, :codigo_insumo)
+            ");
+
+                foreach ($data['insumos'] as $insumoCodigo) {
+                    $stmt->execute([
+                        ':system_unit_id' => $data['system_unit_id'],
+                        ':id_ficha' => $fichaId,
+                        ':codigo_insumo' => $insumoCodigo,
+                    ]);
+                }
+            }
+
+            $pdo->commit();
+            return ['success' => true, 'message' => 'Ficha salva com sucesso.'];
+
         } catch (Exception $e) {
+            $pdo->rollBack();
             return ['success' => false, 'message' => 'Erro ao salvar ficha: ' . $e->getMessage()];
         }
     }
+
 
     public static function toggleStatusFicha($id, $system_unit_id)
     {
@@ -319,6 +349,28 @@ class ManipulacaoController
         }
     }
 
+    public static function getUsuariosEstoqueManipulacao()
+    {
+        global $pdop;
+
+        try {
+            $stmt = $pdop->prepare("
+            SELECT u.id, u.name, u.login
+            FROM system_users u
+            JOIN system_user_role ur ON ur.system_user_id = u.id
+            WHERE ur.system_role_id = 4
+              AND u.active = 'Y'
+            ORDER BY u.name
+        ");
+            $stmt->execute();
+            $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'usuarios' => $usuarios];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Erro ao buscar usuários: ' . $e->getMessage()];
+        }
+    }
+
     public static function registrarAnexoMovimentacao($documento, $system_unit_id, $url, $descricao = null)
     {
         global $pdo;
@@ -390,6 +442,55 @@ class ManipulacaoController
         }
         return $prefixo . '-000001';
     }
+
+    public static function getFichaDetalhada($ficha_id, $system_unit_id)
+    {
+        global $pdo;
+
+        try {
+            // 1) Busca a ficha
+            $stmt = $pdo->prepare("
+            SELECT id, codigo_produto, nome_produto
+            FROM ficha_manipulacao
+            WHERE id = :id AND system_unit_id = :unit_id
+            LIMIT 1
+        ");
+            $stmt->execute([
+                ':id' => $ficha_id,
+                ':unit_id' => $system_unit_id
+            ]);
+            $ficha = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$ficha) throw new Exception("Ficha não encontrada");
+
+            // 2) Busca os insumos associados (supondo tabela ficha_manipulacao_itens com campo codigo_insumo)
+            $stmt2 = $pdo->prepare("
+            SELECT codigo_insumo AS codigo_produto
+            FROM ficha_manipulacao_itens
+            WHERE id_ficha = :id_ficha AND system_unit_id = :unit_id
+        ");
+            $stmt2->execute([
+                ':id_ficha' => $ficha_id,
+                ':unit_id' => $system_unit_id
+            ]);
+            $insumos = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+
+            return [
+                'success' => true,
+                'data' => [
+                    'id' => (int) $ficha['id'],
+                    'codigo_produto' => (int) $ficha['codigo_produto'],
+                    'nome_produto' => $ficha['nome_produto'],
+                    'insumos' => $insumos
+                ]
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Erro ao buscar ficha detalhada: ' . $e->getMessage()
+            ];
+        }
+    }
+
 
 
 

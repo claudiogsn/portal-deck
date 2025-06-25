@@ -18,6 +18,24 @@
     <script src="bsb/plugins/multi-select/js/jquery.multi-select.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.quicksearch/2.4.0/jquery.quicksearch.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        /* Espaço abaixo do label "Selecionar Insumos" */
+        #modalFicha label {
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        /* Espaçamento entre o campo de busca e a lista */
+        .ms-container .ms-selectable input {
+            margin-bottom: 10px;
+        }
+
+        /* Espaço abaixo do título "Selecionados" */
+        .ms-container .ms-selection {
+            margin-top: 23px;
+        }
+    </style>
+
 </head>
 <body class="theme-blue">
 <div class="container-fluid">
@@ -64,7 +82,7 @@
                     <select id="selectPrincipal" class="form-control" style="width: 100%"></select>
                 </div>
 
-                <div class="row">
+                <div class="row" style="margin-top: 20px;">
                     <div class="col-md-12">
                         <label>Selecionar Insumos</label>
                         <select multiple="multiple" id="selectInsumos" class="form-control"></select>
@@ -78,6 +96,24 @@
         </div>
     </div>
 </div>
+<!-- Modal de Vincular Usuários -->
+<div class="modal fade" id="modalUsuarios" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header"><h4 class="modal-title">Vincular Usuários à Ficha</h4></div>
+            <div class="modal-body">
+                <input type="hidden" id="usuarioFichaId">
+                <label>Selecionar Usuários</label>
+                <select multiple="multiple" id="selectUsuarios" class="form-control"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="salvarUsuariosFicha()">Salvar</button>
+                <button class="btn btn-default" data-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
     const baseUrl = window.location.hostname !== 'localhost'
@@ -121,9 +157,11 @@
             const row = `
       <tr>
         <td>
-          <a href="#" onclick="editarFicha(${f.id})" title="Editar"><i class="fa fa-edit text-info"></i></a>
+          <a href="#" onclick="editarFicha(${f.id})" title="Editar"><i class="fa fa-edit blue"></i></a>
           &nbsp;
           <a href="#" onclick="alterarStatusFicha(${f.id})" title="Ativar/Desativar"><i class="fa fa-power-off orange"></i></a>
+          &nbsp;
+          <a href="#" onclick="abrirModalUsuarios(${f.id})" title="Vincular Usuários"><i class="fa fa-users green"></i></a>
         </td>
         <td>${f.id}</td>
         <td>${f.nome_produto}</td>
@@ -165,7 +203,7 @@
             $('#selectInsumos').multiSelect({
                 selectableHeader: "<input type='text' class='form-control' autocomplete='off' placeholder='Buscar'>",
                 selectionHeader: "<div class='text-center'>Selecionados</div>",
-                afterInit: function(ms) {
+                'afterInit': function(ms) {
                     const that = this,
                         $selectableSearch = that.$selectableUl.prev(),
                         selectableSearchString = '#' + that.$container.attr('id') + ' .ms-elem-selectable:not(.ms-selected)';
@@ -190,6 +228,8 @@
         const produto_principal = $('#selectPrincipal').val();
         const produto_nome = $('#selectPrincipal option:selected').text();
         const insumos = $('#selectInsumos').val() || [];
+        const id = $('#fichaId').val();
+
 
         if (!produto_principal || insumos.length === 0) {
             Swal.fire('Erro', 'Selecione um produto principal e ao menos um insumo.', 'warning');
@@ -202,6 +242,7 @@
             method: 'saveFicha',
             token,
             data: {
+                ...(id ? { id: parseInt(id) } : {}),
                 system_unit_id,
                 codigo_produto: parseInt(produto_principal),
                 nome_produto: produto_nome,
@@ -216,9 +257,72 @@
         });
     }
 
-    function editarFicha(id) {
-        Swal.fire('Atenção', 'Edição de ficha será implementada na próxima etapa.', 'info');
+    async function editarFicha(id) {
+        $('#modalFicha').modal('show');
+        $('#fichaId').val(id);
+        $('#selectPrincipal').empty();
+        $('#selectInsumos').empty();
+
+        try { $('#selectInsumos').multiSelect('destroy'); } catch (e) {}
+
+        Swal.fire({ title: 'Carregando ficha...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        try {
+            const [resProdutos, resFicha] = await Promise.all([
+                axios.post(baseUrl, {
+                    method: 'listProductsByCategory',
+                    token,
+                    data: { unit_id: system_unit_id }
+                }),
+                axios.post(baseUrl, {
+                    method: 'getFichaDetalhada',
+                    token,
+                    data: { id_ficha: id, system_unit_id }
+                })
+            ]);
+
+            const produtos = resProdutos.data.products_by_category.flatMap(cat => cat.itens);
+            const ficha = resFicha.data.data;
+
+            // Preenche select de principal
+            for (const p of produtos) {
+                const option = new Option(`${p.codigo} - ${p.nome}`, p.codigo);
+                if (p.codigo == ficha.codigo_produto) option.selected = true;
+                $('#selectPrincipal').append(option);
+                $('#selectInsumos').append(new Option(`${p.codigo} - ${p.nome}`, p.codigo));
+            }
+
+            $('#selectPrincipal').select2({ dropdownParent: $('#modalFicha') });
+
+            // Ativa multiselect e seleciona os insumos
+            $('#selectInsumos').multiSelect({
+                selectableHeader: "<input type='text' class='form-control' autocomplete='off' placeholder='Buscar'>",
+                selectionHeader: "<div class='text-center'>Selecionados</div>",
+                afterInit: function(ms) {
+                    const that = this,
+                        $selectableSearch = that.$selectableUl.prev();
+
+                    $selectableSearch
+                        .css('margin-bottom', '10px')
+                        .quicksearch('#' + that.$container.attr('id') + ' .ms-elem-selectable:not(.ms-selected)')
+                        .on('keydown', function(e) {
+                            if (e.which === 40) {
+                                that.$selectableUl.focus();
+                                return false;
+                            }
+                        });
+                }
+            });
+
+            // Seleciona insumos existentes
+            $('#selectInsumos').multiSelect('select', ficha.insumos.map(i => i.codigo_produto.toString()));
+
+            Swal.close();
+        } catch {
+            Swal.fire('Erro', 'Erro ao carregar dados da ficha', 'error');
+        }
     }
+
 
     function alterarStatusFicha(id) {
         Swal.fire({
@@ -245,6 +349,88 @@
             }
         });
     }
+
+
+    async function abrirModalUsuarios(fichaId) {
+        $('#usuarioFichaId').val(fichaId);
+        $('#selectUsuarios').empty().multiSelect('destroy');
+
+        Swal.fire({ title: 'Carregando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        try {
+            const [todos, vinculados] = await Promise.all([
+                axios.post(baseUrl, {
+                    method: 'getUsuariosEstoqueManipulacao',
+                    token,
+                    data: {  }
+                }),
+                axios.post(baseUrl, {
+                    method: 'listarUsuariosDaFicha',
+                    token,
+                    data: { ficha_id: fichaId }
+                })
+            ]);
+
+            const todosUsuarios = todos.data.usuarios || [];
+            const vinculadosIds = (vinculados.data.data || []).map(u => String(u.id));
+
+            for (const u of todosUsuarios) {
+                const option = new Option(`${u.name} (${u.login})`, u.id);
+                $('#selectUsuarios').append(option);
+            }
+
+            $('#selectUsuarios').multiSelect({
+                selectableHeader: "<input type='text' class='form-control' autocomplete='off' placeholder='Buscar'>",
+                selectionHeader: "<div class='text-center'>Selecionados</div>",
+                afterInit: function(ms) {
+                    const that = this,
+                        $selectableSearch = that.$selectableUl.prev(),
+                        selectableSearchString = '#' + that.$container.attr('id') + ' .ms-elem-selectable:not(.ms-selected)';
+                    that.qs1 = $selectableSearch.quicksearch(selectableSearchString).on('keydown', function(e) {
+                        if (e.which === 40) {
+                            that.$selectableUl.focus();
+                            return false;
+                        }
+                    });
+                },
+                afterSelect: () => $('#selectUsuarios').focus(),
+                afterDeselect: () => $('#selectUsuarios').focus()
+            });
+
+            // Selecionar os que já estavam vinculados
+            $('#selectUsuarios').multiSelect('select', vinculadosIds);
+
+            Swal.close();
+            $('#modalUsuarios').modal('show');
+        } catch {
+            Swal.fire('Erro', 'Erro ao carregar usuários', 'error');
+        }
+    }
+
+
+    function salvarUsuariosFicha() {
+        const id_ficha = $('#usuarioFichaId').val();
+        const user_ids = $('#selectUsuarios').val() || [];
+
+        Swal.fire({ title: 'Salvando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        axios.post(baseUrl, {
+            method: 'saveUsuariosPorFicha',
+            token,
+            data: {
+                ficha_id: id_ficha,
+                user_ids: user_ids.map(id => parseInt(id))
+            }
+        }).then(() => {
+            Swal.close();
+            $('#modalUsuarios').modal('hide');
+            Swal.fire('Sucesso', 'Usuários vinculados com sucesso!', 'success');
+        }).catch(() => {
+            Swal.fire('Erro', 'Erro ao salvar usuários da ficha', 'error');
+        });
+    }
+
+
 </script>
 </body>
 </html>
