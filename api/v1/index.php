@@ -31,6 +31,7 @@ require_once 'controllers/ModeloBalancoController.php';
 require_once 'controllers/BiController.php';
 require_once 'controllers/ComprasController.php';
 require_once 'controllers/ManipulacaoController.php';
+require_once 'controllers/UserController.php';
 
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -49,6 +50,7 @@ if (isset($data['method']) && isset($data['data'])) {
 
     // Métodos que não precisam de autenticação
     $noAuthMethods = ['validateCPF',
+        'getUserDetails',
         'listarFichas',
         'listarItensFicha',
         'listarMovimentacoes',
@@ -939,6 +941,15 @@ if (isset($data['method']) && isset($data['data'])) {
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetro tag ausente'];
+                }
+                break;
+                // Métodos para UserController
+            case 'getUserDetails':
+                if (isset($requestData['user'])) {
+                    $response = UserController::getUserDetails($requestData['user']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro user ausente'];
                 }
                 break;
             default:

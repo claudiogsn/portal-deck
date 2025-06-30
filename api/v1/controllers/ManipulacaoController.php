@@ -28,14 +28,39 @@ class ManipulacaoController
         global $pdo;
 
         try {
+            // Primeiro busca os itens da ficha
             $stmt = $pdo->prepare("
-                SELECT *
-                FROM ficha_manipulacao_itens
-                WHERE id_ficha = :id_ficha AND system_unit_id = :unit_id
-                ORDER BY id ASC
-            ");
+            SELECT *
+            FROM ficha_manipulacao_itens
+            WHERE id_ficha = :id_ficha AND system_unit_id = :unit_id
+            ORDER BY id ASC
+        ");
             $stmt->execute([':id_ficha' => $id_ficha, ':unit_id' => $system_unit_id]);
-            return ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
+            $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Para cada item, busca o nome do produto
+            foreach ($itens as &$item) {
+                if (!empty($item['codigo_insumo'])) {
+                    $stmtProd = $pdo->prepare("
+                    SELECT nome 
+                    FROM products 
+                    WHERE system_unit_id = :unit_id 
+                    AND codigo = :codigo
+                    LIMIT 1
+                ");
+                    $stmtProd->execute([
+                        ':unit_id' => $system_unit_id,
+                        ':codigo' => $item['codigo_insumo']
+                    ]);
+                    $produto = $stmtProd->fetch(PDO::FETCH_ASSOC);
+
+                    $item['produto_nome'] = $produto ? $produto['nome'] : null;
+                } else {
+                    $item['produto_nome'] = null;
+                }
+            }
+
+            return ['success' => true, 'data' => $itens];
         } catch (Exception $e) {
             return ['success' => false, 'message' => 'Erro ao listar itens da ficha: ' . $e->getMessage()];
         }
@@ -109,10 +134,10 @@ class ManipulacaoController
             $stmt = $pdo->prepare("
             INSERT INTO ficha_manipulacao_mov (
                 system_unit_id, id_ficha, documento, codigo_produto,
-                descarte, liquido, operador, data
+                descarte, peso_bruto, operador, data
             ) VALUES (
                 :system_unit_id, :id_ficha, :documento, :codigo_produto,
-                :descarte, :liquido, :operador, :data
+                :descarte, :peso_bruto, :operador, :data
             )
         ");
             $stmt->execute([
@@ -121,9 +146,9 @@ class ManipulacaoController
                 ':documento' => $documento,
                 ':codigo_produto' => $data['codigo_produto'],
                 ':descarte' => $data['descarte'],
-                ':liquido' => $data['liquido'],
+                ':peso_bruto' => $data['peso_bruto'],
                 ':operador' => $data['operador'],
-                ':data' => $data['data']
+                ':data' => date('Y-m-d H:i:s')
             ]);
 
             // 3. Insere os itens da movimentação
