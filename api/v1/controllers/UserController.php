@@ -69,6 +69,28 @@ class UserController {
         return array('success' => true, 'userDetails' => $userDetails);
     }
 
+    public static function getUnitsUser($user_id)
+    {
+        global $pdop;
+
+        $stmt = $pdop->prepare("
+        SELECT su.id, su.name 
+        FROM system_unit su
+        INNER JOIN system_user_unit suu ON su.id = suu.system_unit_id
+        WHERE suu.system_user_id = :user_id
+    ");
+        $stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $units = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!$units) {
+            return ['success' => false, 'message' => 'Nenhuma unidade encontrada para o usuário.'];
+        }
+
+        return ['success' => true, 'units' => $units];
+    }
+
+
 }
 
 ?>

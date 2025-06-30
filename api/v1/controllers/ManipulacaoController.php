@@ -84,6 +84,110 @@ class ManipulacaoController
         }
     }
 
+   public static function getDetalhesMovimentacao($documento, $system_unit_id)
+{
+    global $pdo, $pdop;
+
+    try {
+        // 1. Buscar cabeçalho da movimentação
+        $stmtCabecalho = $pdo->prepare("
+            SELECT *
+            FROM ficha_manipulacao_mov
+            WHERE documento = :documento AND system_unit_id = :unit_id
+            LIMIT 1
+        ");
+        $stmtCabecalho->execute([
+            ':documento' => $documento,
+            ':unit_id' => $system_unit_id
+        ]);
+        $cabecalho = $stmtCabecalho->fetch(PDO::FETCH_ASSOC);
+
+        if (!$cabecalho) {
+            return ['success' => false, 'message' => 'Movimentação não encontrada.'];
+        }
+
+        // 2. Buscar nome do operador e nome da unidade
+        $stmtOperador = $pdop->prepare("
+            SELECT u.name AS nome_operador, s.name AS nome_unidade
+            FROM system_users u
+            LEFT JOIN system_unit s ON u.system_unit_id = s.id
+            WHERE u.id = :user_id
+            LIMIT 1
+        ");
+        $stmtOperador->execute([':user_id' => $cabecalho['operador']]);
+        $dadosOperador = $stmtOperador->fetch(PDO::FETCH_ASSOC) ?? [];
+
+        // ✅ Adiciona ao cabeçalho
+        $cabecalho['nome_operador'] = $dadosOperador['nome_operador'] ?? '';
+        $cabecalho['nome_unidade'] = $dadosOperador['nome_unidade'] ?? '';
+
+        // ✅ Calcula percentual de descarte e aproveitamento
+        $pesoBruto = (float) $cabecalho['peso_bruto'];
+        $descarte = (float) $cabecalho['descarte'];
+
+        $cabecalho['percentual_descarte'] = $pesoBruto > 0 ? round(($descarte / $pesoBruto) * 100, 2) : 0;
+        $cabecalho['percentual_aproveitamento'] = 100 - $cabecalho['percentual_descarte'];
+
+        // 3. Itens da movimentação com nome do produto
+        $stmtItens = $pdo->prepare("
+            SELECT m.*, p.nome AS nome_produto
+            FROM ficha_manipulacao_itens_mov m
+            LEFT JOIN products p 
+            ON p.system_unit_id = m.system_unit_id AND p.codigo = m.codigo_insumo
+            WHERE m.documento = :documento AND m.system_unit_id = :unit_id
+            ORDER BY m.id ASC
+        ");
+        $stmtItens->execute([
+            ':documento' => $documento,
+            ':unit_id' => $system_unit_id
+        ]);
+        $itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
+
+        // ✅ Adiciona percentual de cada item
+       foreach ($itens as &$item) {
+            $quantidadeGramas = (float) $item['quantidade'];
+            $quantidadeKg = round($quantidadeGramas / 1000, 3);
+
+            if ($quantidadeKg <= 0) {
+                $item = null; // marca para remoção
+                continue;
+            }
+
+            $item['quantidade'] = $quantidadeKg;
+            $item['percentual_item'] = $pesoBruto > 0 ? round(($quantidadeKg / $pesoBruto) * 100, 2) : 0;
+        }
+
+        // Remove itens nulos (com quantidade zero)
+        $itens = array_filter($itens);
+
+        // 4. Anexos
+        $stmtAnexos = $pdo->prepare("
+            SELECT *
+            FROM ficha_manipulacao_mov_anexo
+            WHERE documento = :documento AND system_unit_id = :unit_id
+            ORDER BY id ASC
+        ");
+        $stmtAnexos->execute([
+            ':documento' => $documento,
+            ':unit_id' => $system_unit_id
+        ]);
+        $anexos = $stmtAnexos->fetchAll(PDO::FETCH_ASSOC);
+
+        // 5. Retorno completo
+        return [
+            'success' => true,
+            'data' => [
+                'cabecalho' => $cabecalho,
+                'itens' => $itens,
+                'anexos' => $anexos
+            ]
+        ];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Erro ao buscar detalhes: ' . $e->getMessage()];
+    }
+}
+
+
     public static function listarItensMovimentacao($documento, $system_unit_id)
     {
         global $pdo;

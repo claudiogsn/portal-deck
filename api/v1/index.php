@@ -65,11 +65,13 @@ if (isset($data['method']) && isset($data['data'])) {
 
     // Métodos que não precisam de autenticação
     $noAuthMethods = ['validateCPF',
+        'getUnitsUser',
         'getUserDetails',
         'listarFichas',
         'listarItensFicha',
         'listarMovimentacoes',
         'listarItensMovimentacao',
+        'getDetalhesMovimentacao',
         'listarAnexosMovimentacao',
         'registrarMovimentacao',
         'saveFicha',
@@ -140,6 +142,15 @@ if (isset($data['method']) && isset($data['data'])) {
             case 'listarItensMovimentacao':
                 if (isset($requestData['documento'], $requestData['system_unit_id'])) {
                     $response = ManipulacaoController::listarItensMovimentacao($requestData['documento'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetros documento e/ou system_unit_id ausentes'];
+                }
+                break;
+
+            case 'getDetalhesMovimentacao':
+                if (isset($requestData['documento'], $requestData['system_unit_id'])) {
+                    $response = ManipulacaoController::getDetalhesMovimentacao($requestData['documento'], $requestData['system_unit_id']);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetros documento e/ou system_unit_id ausentes'];
@@ -962,6 +973,14 @@ if (isset($data['method']) && isset($data['data'])) {
             case 'getUserDetails':
                 if (isset($requestData['user'])) {
                     $response = UserController::getUserDetails($requestData['user']);
+                } else {
+                    http_response_code(400);
+                    $response = ['error' => 'Parâmetro user ausente'];
+                }
+                break;
+            case 'getUnitsUser':
+                if (isset($requestData['user'])) {
+                    $response = UserController::getUnitsUser($requestData['user']);
                 } else {
                     http_response_code(400);
                     $response = ['error' => 'Parâmetro user ausente'];
