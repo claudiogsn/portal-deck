@@ -8,11 +8,26 @@ ini_set('max_execution_time', '600');
 ini_set('max_input_time', '600');
 ini_set('memory_limit', '512M');
 
+$allowed_origins = [
+    'http://localhost:3000',
+    'https://vemprodeck.com.br',
+    'https://portal.vemprodeck.com.br',
+];
 
-header("Access-Control-Allow-Origin: *"); // Permitir todas as origens
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Métodos permitidos
-header("Access-Control-Allow-Headers: Content-Type, Authorization"); // Cabeçalhos permitidos
-header("Access-Control-Allow-Origin: http://localhost:3000");
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization");
+    header("Access-Control-Allow-Credentials: true");
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 require_once 'controllers/ComposicaoController.php';
