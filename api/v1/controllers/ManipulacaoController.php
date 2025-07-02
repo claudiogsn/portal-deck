@@ -84,108 +84,120 @@ class ManipulacaoController
         }
     }
 
-   public static function getDetalhesMovimentacao($documento, $system_unit_id)
-{
-    global $pdo, $pdop;
-
-    try {
-        // 1. Buscar cabeçalho da movimentação
-        $stmtCabecalho = $pdo->prepare("
-            SELECT *
-            FROM ficha_manipulacao_mov
-            WHERE documento = :documento AND system_unit_id = :unit_id
-            LIMIT 1
-        ");
-        $stmtCabecalho->execute([
-            ':documento' => $documento,
-            ':unit_id' => $system_unit_id
-        ]);
-        $cabecalho = $stmtCabecalho->fetch(PDO::FETCH_ASSOC);
-
-        if (!$cabecalho) {
-            return ['success' => false, 'message' => 'Movimentação não encontrada.'];
-        }
-
-        // 2. Buscar nome do operador e nome da unidade
-        $stmtOperador = $pdop->prepare("
-            SELECT u.name AS nome_operador, s.name AS nome_unidade
-            FROM system_users u
-            LEFT JOIN system_unit s ON u.system_unit_id = s.id
-            WHERE u.id = :user_id
-            LIMIT 1
-        ");
-        $stmtOperador->execute([':user_id' => $cabecalho['operador']]);
-        $dadosOperador = $stmtOperador->fetch(PDO::FETCH_ASSOC) ?? [];
-
-        // ✅ Adiciona ao cabeçalho
-        $cabecalho['nome_operador'] = $dadosOperador['nome_operador'] ?? '';
-        $cabecalho['nome_unidade'] = $dadosOperador['nome_unidade'] ?? '';
-
-        // ✅ Calcula percentual de descarte e aproveitamento
-        $pesoBruto = (float) $cabecalho['peso_bruto'];
-        $descarte = (float) $cabecalho['descarte'];
-
-        $cabecalho['percentual_descarte'] = $pesoBruto > 0 ? round(($descarte / $pesoBruto) * 100, 2) : 0;
-        $cabecalho['percentual_aproveitamento'] = 100 - $cabecalho['percentual_descarte'];
-
-        // 3. Itens da movimentação com nome do produto
-        $stmtItens = $pdo->prepare("
-            SELECT m.*, p.nome AS nome_produto
-            FROM ficha_manipulacao_itens_mov m
-            LEFT JOIN products p 
-            ON p.system_unit_id = m.system_unit_id AND p.codigo = m.codigo_insumo
-            WHERE m.documento = :documento AND m.system_unit_id = :unit_id
-            ORDER BY m.id ASC
-        ");
-        $stmtItens->execute([
-            ':documento' => $documento,
-            ':unit_id' => $system_unit_id
-        ]);
-        $itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
-
-        // ✅ Adiciona percentual de cada item
-       foreach ($itens as &$item) {
-            $quantidadeGramas = (float) $item['quantidade'];
-            $quantidadeKg = round($quantidadeGramas / 1000, 3);
-
-            if ($quantidadeKg <= 0) {
-                $item = null; // marca para remoção
-                continue;
+    public static function getDetalhesMovimentacao($documento, $system_unit_id)
+    {
+        global $pdo, $pdop;
+    
+        try {
+            // 1. Buscar cabeçalho da movimentação
+            $stmtCabecalho = $pdo->prepare("
+                SELECT *
+                FROM ficha_manipulacao_mov
+                WHERE documento = :documento AND system_unit_id = :unit_id
+                LIMIT 1
+            ");
+            $stmtCabecalho->execute([
+                ':documento' => $documento,
+                ':unit_id' => $system_unit_id
+            ]);
+            $cabecalho = $stmtCabecalho->fetch(PDO::FETCH_ASSOC);
+    
+            if (!$cabecalho) {
+                return ['success' => false, 'message' => 'Movimentação não encontrada.'];
             }
-
-            $item['quantidade'] = $quantidadeKg;
-            $item['percentual_item'] = $pesoBruto > 0 ? round(($quantidadeKg / $pesoBruto) * 100, 2) : 0;
+    
+            // 1.1 Buscar nome do produto principal
+            $stmtProduto = $pdo->prepare("
+                SELECT nome 
+                FROM products 
+                WHERE system_unit_id = :unit_id AND codigo = :codigo
+                LIMIT 1
+            ");
+            $stmtProduto->execute([
+                ':unit_id' => $system_unit_id,
+                ':codigo' => $cabecalho['codigo_produto']
+            ]);
+            $produto = $stmtProduto->fetch(PDO::FETCH_ASSOC);
+            $cabecalho['nome_produto'] = $produto['nome'] ?? '(produto não encontrado)';
+    
+            // 2. Buscar nome do operador e nome da unidade
+            $stmtOperador = $pdop->prepare("
+                SELECT u.name AS nome_operador, s.name AS nome_unidade
+                FROM system_users u
+                LEFT JOIN system_unit s ON u.system_unit_id = s.id
+                WHERE u.id = :user_id
+                LIMIT 1
+            ");
+            $stmtOperador->execute([':user_id' => $cabecalho['operador']]);
+            $dadosOperador = $stmtOperador->fetch(PDO::FETCH_ASSOC) ?? [];
+    
+            $cabecalho['nome_operador'] = $dadosOperador['nome_operador'] ?? '';
+            $cabecalho['nome_unidade'] = $dadosOperador['nome_unidade'] ?? '';
+    
+            // 3. Calcular percentuais
+            $pesoBruto = (float) $cabecalho['peso_bruto'];
+            $descarte = (float) $cabecalho['descarte'];
+            $cabecalho['percentual_descarte'] = $pesoBruto > 0 ? round(($descarte / $pesoBruto) * 100, 2) : 0;
+            $cabecalho['percentual_aproveitamento'] = 100 - $cabecalho['percentual_descarte'];
+    
+            // 4. Itens da movimentação
+            $stmtItens = $pdo->prepare("
+                SELECT m.*, p.nome AS nome_produto
+                FROM ficha_manipulacao_itens_mov m
+                LEFT JOIN products p 
+                    ON p.system_unit_id = m.system_unit_id AND p.codigo = m.codigo_insumo
+                WHERE m.documento = :documento AND m.system_unit_id = :unit_id
+                ORDER BY m.id ASC
+            ");
+            $stmtItens->execute([
+                ':documento' => $documento,
+                ':unit_id' => $system_unit_id
+            ]);
+            $itens = $stmtItens->fetchAll(PDO::FETCH_ASSOC);
+    
+            foreach ($itens as &$item) {
+                $quantidadeGramas = (float) $item['quantidade'];
+                $quantidadeKg = round($quantidadeGramas / 1000, 3);
+    
+                if ($quantidadeKg <= 0) {
+                    $item = null;
+                    continue;
+                }
+    
+                $item['quantidade'] = $quantidadeKg;
+                $item['percentual_item'] = $pesoBruto > 0 ? round(($quantidadeKg / $pesoBruto) * 100, 2) : 0;
+            }
+    
+            // Remove itens nulos
+            $itens = array_filter($itens);
+    
+            // 5. Anexos
+            $stmtAnexos = $pdo->prepare("
+                SELECT *
+                FROM ficha_manipulacao_mov_anexo
+                WHERE documento = :documento AND system_unit_id = :unit_id
+                ORDER BY id ASC
+            ");
+            $stmtAnexos->execute([
+                ':documento' => $documento,
+                ':unit_id' => $system_unit_id
+            ]);
+            $anexos = $stmtAnexos->fetchAll(PDO::FETCH_ASSOC);
+    
+            // 6. Retorno final com itens como array numérico
+            return [
+                'success' => true,
+                'data' => [
+                    'cabecalho' => $cabecalho,
+                    'itens' => array_values($itens),
+                    'anexos' => $anexos
+                ]
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Erro ao buscar detalhes: ' . $e->getMessage()];
         }
-
-        // Remove itens nulos (com quantidade zero)
-        $itens = array_filter($itens);
-
-        // 4. Anexos
-        $stmtAnexos = $pdo->prepare("
-            SELECT *
-            FROM ficha_manipulacao_mov_anexo
-            WHERE documento = :documento AND system_unit_id = :unit_id
-            ORDER BY id ASC
-        ");
-        $stmtAnexos->execute([
-            ':documento' => $documento,
-            ':unit_id' => $system_unit_id
-        ]);
-        $anexos = $stmtAnexos->fetchAll(PDO::FETCH_ASSOC);
-
-        // 5. Retorno completo
-        return [
-            'success' => true,
-            'data' => [
-                'cabecalho' => $cabecalho,
-                'itens' => $itens,
-                'anexos' => $anexos
-            ]
-        ];
-    } catch (Exception $e) {
-        return ['success' => false, 'message' => 'Erro ao buscar detalhes: ' . $e->getMessage()];
     }
-}
+     
 
 
     public static function listarItensMovimentacao($documento, $system_unit_id)
@@ -238,10 +250,10 @@ class ManipulacaoController
             $stmt = $pdo->prepare("
             INSERT INTO ficha_manipulacao_mov (
                 system_unit_id, id_ficha, documento, codigo_produto,
-                descarte, peso_bruto, operador, data
+                descarte, peso_bruto, operador, data,observacao
             ) VALUES (
                 :system_unit_id, :id_ficha, :documento, :codigo_produto,
-                :descarte, :peso_bruto, :operador, :data
+                :descarte, :peso_bruto, :operador, :data,:observacao
             )
         ");
             $stmt->execute([
@@ -252,6 +264,7 @@ class ManipulacaoController
                 ':descarte' => $data['descarte'],
                 ':peso_bruto' => $data['peso_bruto'],
                 ':operador' => $data['operador'],
+                ':observacao' => $data['observacao'],
                 ':data' => date('Y-m-d H:i:s')
             ]);
 
@@ -266,15 +279,20 @@ class ManipulacaoController
                     :unidade, :quantidade
                 )
             ");
-                foreach ($data['itens'] as $item) {
-                    $stmtItem->execute([
-                        ':system_unit_id' => $data['system_unit_id'],
-                        ':documento' => $documento,
-                        ':codigo_insumo' => $item['codigo_insumo'],
-                        ':unidade' => $item['unidade'],
-                        ':quantidade' => $item['quantidade']
-                    ]);
+            foreach ($data['itens'] as $item) {
+                $quantidade = (float) $item['quantidade'];
+                if ($quantidade <= 0) {
+                    continue; // ignora itens com quantidade zero ou negativa
                 }
+            
+                $stmtItem->execute([
+                    ':system_unit_id' => $data['system_unit_id'],
+                    ':documento' => $documento,
+                    ':codigo_insumo' => $item['codigo_insumo'],
+                    ':unidade' => $item['unidade'],
+                    ':quantidade' => $quantidade
+                ]);
+            }
             }
 
             return [
