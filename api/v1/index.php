@@ -156,6 +156,14 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetros documento e/ou system_unit_id ausentes'];
                 }
                 break;
+            case 'listarMovimentacaoPorPeriodo':
+                    if (isset($requestData['data_inicio'], $requestData['data_fim'])) {
+                        $response = ManipulacaoController::listarMovimentacaoPorPeriodo($requestData['data_inicio'], $requestData['data_fim'],$requestData['user']);
+                    } else {
+                        http_response_code(400);
+                        $response = ['error' => 'Parâmetros data_inicio e/ou data_fim ausentes'];
+                    }
+                break;
 
             case 'listarAnexosMovimentacao':
                 if (isset($requestData['documento'], $requestData['system_unit_id'])) {

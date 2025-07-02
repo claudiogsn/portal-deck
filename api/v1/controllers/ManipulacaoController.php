@@ -197,7 +197,6 @@ class ManipulacaoController
             return ['success' => false, 'message' => 'Erro ao buscar detalhes: ' . $e->getMessage()];
         }
     }
-     
 
 
     public static function listarItensMovimentacao($documento, $system_unit_id)
@@ -637,6 +636,90 @@ class ManipulacaoController
             ];
         }
     }
+
+    public static function listarMovimentacaoPorPeriodo($data_inicio, $data_fim,$user)
+    {
+        global $pdo, $pdop;
+
+        try {
+            $stmtUnidades = $pdop->prepare("select suu.system_unit_id as id,su.name as name from system_user_unit suu left join system_unit as su on suu.system_unit_id = su.id where suu.system_user_id = :user");
+            $stmtUnidades->execute([':user' => $user]);
+            $unidades = $stmtUnidades->fetchAll(PDO::FETCH_ASSOC);
+
+            $resultado = [];
+
+            foreach ($unidades as $unidade) {
+                $unit_id = $unidade['id'];
+                $nome_unidade = $unidade['name'];
+
+                $stmtMov = $pdo->prepare("
+                    SELECT 
+                        m.id, m.system_unit_id, m.id_ficha, m.documento,
+                        m.codigo_produto, m.descarte, m.peso_bruto,
+                        m.operador, m.data
+                    FROM ficha_manipulacao_mov m
+                    WHERE m.system_unit_id = :unit_id
+                    AND m.data BETWEEN :data_inicio AND :data_fim
+                    ORDER BY m.data DESC
+                ");
+                $stmtMov->execute([
+                    ':unit_id' => $unit_id,
+                    ':data_inicio' => $data_inicio . ' 00:00:00',
+                    ':data_fim' => $data_fim . ' 23:59:59',
+                ]);
+
+                $movimentacoes = $stmtMov->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($movimentacoes as $mov) {
+                    $pesoBruto = (float) $mov['peso_bruto'];
+                    $descarte = (float) $mov['descarte'];
+
+                    // Calcular percentual de aproveitamento
+                    $percentual_aproveitamento = ($pesoBruto > 0)
+                        ? round(100 - (($descarte / $pesoBruto) * 100), 2)
+                        : 0;
+
+                    // Buscar nome e login do operador
+                    $stmtOperador = $pdop->prepare("
+                        SELECT name, login FROM system_users WHERE id = :id LIMIT 1
+                    ");
+                    $stmtOperador->execute([':id' => $mov['operador']]);
+                    $operadorData = $stmtOperador->fetch(PDO::FETCH_ASSOC);
+
+                    $nome_operador = $operadorData['name'] ?? 'Desconhecido';
+                    $login_operador = $operadorData['login'] ?? null;
+
+                    // Buscar nome do produto
+                    $stmtProduto = $pdo->prepare("
+                        SELECT nome FROM products
+                        WHERE system_unit_id = :unit_id AND codigo = :codigo
+                        LIMIT 1
+                    ");
+                    $stmtProduto->execute([
+                        ':unit_id' => $unit_id,
+                        ':codigo' => $mov['codigo_produto']
+                    ]);
+                    $nome_produto = $stmtProduto->fetchColumn() ?: '(produto não encontrado)';
+
+                    // Montar retorno
+                    $mov['nome_unidade'] = $nome_unidade;
+                    $mov['nome_operador'] = $nome_operador;
+                    $mov['login_operador'] = $login_operador;
+                    $mov['nome_produto'] = $nome_produto;
+                    $mov['percentual_aproveitamento'] = $percentual_aproveitamento;
+
+                    $resultado[] = $mov;
+                }
+
+            }
+
+            return ['success' => true, 'data' => $resultado];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Erro ao listar movimentações: ' . $e->getMessage()];
+        }
+    }
+
 
 
 

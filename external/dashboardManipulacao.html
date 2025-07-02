@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Aproveitamento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 p-6">
+
+<!-- Filtros -->
+<div class="flex flex-wrap gap-4 mb-6">
+    <button onclick="setRange('hoje')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">Hoje</button>
+    <button onclick="setRange('ontem')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">Ontem</button>
+    <button onclick="setRange('7dias')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">7 dias</button>
+    <button onclick="setRange('mes')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow">Mês</button>
+
+    <input type="date" id="startDate" onchange="loadData()" class="border p-2 rounded-md shadow" />
+    <input type="date" id="endDate" onchange="loadData()" class="border p-2 rounded-md shadow" />
+
+    <select id="filtroUnidade" class="border p-2 rounded-md shadow" onchange="loadData()">
+        <option value="">Todas as Unidades</option>
+    </select>
+    <select id="filtroProduto" class="border p-2 rounded-md shadow" onchange="loadData()">
+        <option value="">Todos os Produtos</option>
+    </select>
+    <select id="filtroOperador" class="border p-2 rounded-md shadow" onchange="loadData()">
+        <option value="">Todos os Operadores</option>
+    </select>
+</div>
+
+<!-- Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-2">Aproveitamento Médio</h2>
+        <div id="aproveitamentoGauge" style="height: 250px;"></div>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-4">Ranking por Operador</h2>
+        <ul id="rankingOperadores" class="space-y-2 text-sm"></ul>
+    </div>
+</div>
+
+<!-- Tabela -->
+<div class="bg-white p-6 rounded-lg shadow mb-6">
+    <h2 class="text-lg font-semibold mb-4">Lista de Movimentações</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-100">
+            <tr>
+                <th class="px-4 py-2 text-left">Data</th>
+                <th class="px-4 py-2 text-left">Documento</th>
+                <th class="px-4 py-2 text-left">Produto</th>
+                <th class="px-4 py-2 text-left">Unidade</th>
+                <th class="px-4 py-2 text-left">Operador</th>
+                <th class="px-4 py-2 text-right">Peso (kg)</th>
+                <th class="px-4 py-2 text-right">Descarte (kg)</th>
+                <th class="px-4 py-2 text-right">% Aproveitamento</th>
+            </tr>
+            </thead>
+            <tbody id="tabelaMovimentacoes" class="bg-white divide-y divide-gray-100"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const baseUrl = window.location.hostname !== 'localhost' ?
+        'https://portal.vemprodeck.com.br/api/v1/index.php' :
+        'http://localhost/portal-deck/api/v1/index.php';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const user = urlParams.get('user');
+
+    const filtros = {
+        data_inicio: '',
+        data_fim: '',
+        unidade: '',
+        produto: '',
+        operador: ''
+    };
+
+    function setRange(tipo) {
+        const now = new Date();
+        let start = new Date();
+
+        if (tipo === 'ontem') start.setDate(now.getDate() - 1);
+        else if (tipo === '7dias') start.setDate(now.getDate() - 7);
+        else if (tipo === 'mes') start.setDate(1);
+
+        const format = (d) => d.toISOString().split('T')[0];
+        document.getElementById('startDate').value = format(start);
+        document.getElementById('endDate').value = format(now);
+        loadData();
+    }
+
+    async function loadData() {
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const unidade = document.getElementById('filtroUnidade').value;
+        const produto = document.getElementById('filtroProduto').value;
+        const operador = document.getElementById('filtroOperador').value;
+
+        filtros.data_inicio = start;
+        filtros.data_fim = end;
+        filtros.unidade = unidade;
+        filtros.produto = produto;
+        filtros.operador = operador;
+
+        try {
+            Swal.fire({
+                title: 'Carregando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const response = await axios.post(baseUrl, {
+                method: 'listarMovimentacaoPorPeriodo',
+                token: token,
+                data: { user: user, data_inicio: start, data_fim: end }
+            });
+
+            Swal.close();
+
+            if (!response.data.success) throw new Error("Falha na resposta");
+
+            const dados = response.data.data || [];
+
+            const filtrados = dados.filter(mov => {
+                return (!unidade || mov.nome_unidade === unidade) &&
+                    (!produto || mov.nome_produto === produto) &&
+                    (!operador || mov.nome_operador === operador);
+            });
+
+            renderTabela(filtrados);
+            renderGauge(filtrados);
+            renderRanking(filtrados);
+            preencherSelects(dados);
+
+        } catch (err) {
+            Swal.close();
+            Swal.fire('Erro', 'Falha ao carregar dados.', 'error');
+            console.error(err);
+        }
+    }
+
+
+    function renderTabela(movimentacoes) {
+        const tbody = document.getElementById('tabelaMovimentacoes');
+        tbody.innerHTML = '';
+
+        movimentacoes.forEach(m => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+        <td class="px-4 py-2">${new Date(m.data).toLocaleString()}</td>
+        <td class="px-4 py-2">${m.documento}</td>
+        <td class="px-4 py-2">${m.nome_produto}</td>
+        <td class="px-4 py-2">${m.nome_unidade}</td>
+        <td class="px-4 py-2">${m.nome_operador}</td>
+        <td class="px-4 py-2 text-right">${(m.peso_bruto || 0).toFixed(2)}</td>
+        <td class="px-4 py-2 text-right">${(m.descarte || 0).toFixed(2)}</td>
+        <td class="px-4 py-2 text-right">${(m.percentual_aproveitamento || 0).toFixed(2)}%</td>
+      `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderGauge(movs) {
+        const media = movs.length
+            ? movs.reduce((acc, m) => acc + parseFloat(m.percentual_aproveitamento || 0), 0) / movs.length
+            : 0;
+
+        const chart = echarts.init(document.getElementById('aproveitamentoGauge'));
+        chart.setOption({
+            series: [{
+                type: 'gauge',
+                min: 0,
+                max: 100,
+                pointer: { show: false },
+                progress: {
+                    show: true,
+                    width: 20,
+                    itemStyle: { color: getColor(media) }
+                },
+                axisLine: { lineStyle: { width: 20, color: [[1, '#e0e0e0']] } },
+                axisLabel: { show: false },
+                splitLine: { show: false },
+                axisTick: { show: false },
+                data: [{
+                    value: media.toFixed(2),
+                    detail: {
+                        valueAnimation: true,
+                        fontSize: 24,
+                        offsetCenter: [0, '0%'],
+                        formatter: '{value}%',
+                        color: getColor(media)
+                    },
+                    name: 'Aproveitamento'
+                }]
+            }]
+        });
+    }
+
+    function renderRanking(movs) {
+        const operMap = {};
+        movs.forEach(m => {
+            const login = m.login_operador || 'desconhecido';
+            if (!operMap[login]) {
+                operMap[login] = { nome: m.nome_operador, login, valores: [] };
+            }
+            operMap[login].valores.push(m.percentual_aproveitamento || 0);
+        });
+
+        const ranking = Object.values(operMap)
+            .map(o => ({
+                ...o,
+                media: o.valores.reduce((a, b) => a + b, 0) / o.valores.length
+            }))
+            .sort((a, b) => b.media - a.media)
+            .slice(0, 3);
+
+        const medalhas = ['🥇', '🥈', '🥉'];
+
+        const ul = document.getElementById('rankingOperadores');
+        ul.innerHTML = '';
+
+        ranking.forEach((r, i) => {
+            const li = document.createElement('li');
+            li.className = `flex items-center gap-4 p-3 rounded-lg border ${
+                i === 0 ? 'bg-yellow-50 border-yellow-300 text-yellow-800 font-bold text-base shadow' : 'bg-white'
+            }`;
+
+            const fotoUrl = `https://portal.vemprodeck.com.br/app/images/photos/${r.login}.jpg`;
+
+            li.innerHTML = `
+      <img src="${fotoUrl}"
+           onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png';"
+           alt="foto"
+           class="w-12 h-12 rounded-full object-cover border-2 ${
+                i === 0 ? 'border-yellow-400 scale-110' : 'border-gray-300'
+            }"
+      />
+      <div class="flex-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">${medalhas[i]}</span>
+          <span>${r.nome}</span>
+        </div>
+        <div class="text-sm text-gray-500 mt-1">${r.media.toFixed(2)}% de aproveitamento</div>
+      </div>
+    `;
+            ul.appendChild(li);
+        });
+    }
+
+
+    function preencherSelects(dados) {
+        const unidades = new Set();
+        const produtos = new Set();
+        const operadores = new Set();
+
+        dados.forEach(m => {
+            unidades.add(m.nome_unidade);
+            produtos.add(m.nome_produto);
+            operadores.add(m.nome_operador);
+        });
+
+        const preencher = (id, itens) => {
+            const select = document.getElementById(id);
+            const atual = select.value;
+            select.innerHTML = `<option value="">Todos</option>`;
+            Array.from(itens).sort().forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                select.appendChild(opt);
+            });
+            select.value = atual;
+        };
+
+        preencher('filtroUnidade', unidades);
+        preencher('filtroProduto', produtos);
+        preencher('filtroOperador', operadores);
+    }
+
+    function getColor(valor) {
+        if (valor < 60) return '#ef4444';
+        if (valor < 80) return '#f59e0b';
+        return '#10b981';
+    }
+
+    // Carrega mês atual ao abrir
+    document.addEventListener('DOMContentLoaded', () => {
+        setRange('mes');
+    });
+</script>
+</body>
+</html>
