@@ -80,19 +80,6 @@
           </menuitem>
         </menu>
       </menuitem>
-      <menuitem label="Previsão Demanda">
-        <icon>fas:database fa-fw</icon>
-        <menu>
-          <menuitem label="Previsão de Demada - Loja">
-            <action>TransferenciaAssitida</action>
-            <icon>fas:circle fa-fw</icon>
-          </menuitem>
-          <menuitem label="Previsão de Demada - Produção">
-            <action>PrevisaoDemanda</action>
-            <icon>fas:circle fa-fw</icon>
-          </menuitem>
-        </menu>
-      </menuitem>
       <menuitem label="Compra">
         <icon>fas:dolly-flatbed fa-fw</icon>
         <menu>
