@@ -98,6 +98,23 @@
     </div>
 </div>
 
+<div id="modalDetalhesManipulacao" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center px-6 py-4 border-b">
+            <h3 class="text-lg font-semibold">Detalhes da Manipulação</h3>
+            <button onclick="fecharModalManipulacao()" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+        </div>
+        <div id="conteudoManipulacao" class="p-6">
+            <!-- Preenchido via JS -->
+        </div>
+        <div class="flex justify-end px-6 py-4 border-t">
+            <button onclick="fecharModalManipulacao()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Fechar</button>
+        </div>
+    </div>
+</div>
+
+
+
 <script>
     const baseUrl = window.location.hostname !== 'localhost' ?
         'https://portal.vemprodeck.com.br/api/v1/index.php' :
@@ -225,7 +242,11 @@
 
         movimentacoes.forEach(m => {
             const tr = document.createElement('tr');
+            tr.classList.add('cursor-pointer', 'hover:bg-gray-50');
+            tr.onclick = () => abrirModalManipulacao(m.documento, m.system_unit_id);
+
             tr.innerHTML = `
+
         <td class="px-4 py-2">${m.nome_unidade}</td>
         <td class="px-4 py-2">${new Date(m.data).toLocaleString()}</td>
         <td class="px-4 py-2">${m.documento}</td>
@@ -239,6 +260,104 @@
             tbody.appendChild(tr);
         });
     }
+
+    function abrirModalManipulacao(documento, unit_id) {
+        Swal.fire({
+            title: 'Carregando detalhes...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        axios.post(baseUrl, {
+            method: 'getDetalhesMovimentacao',
+            token,
+            data: { documento, system_unit_id: unit_id }
+        }).then(resp => {
+            Swal.close();
+
+            if (!resp.data.success || !resp.data.data) {
+                return Swal.fire('Erro', 'Não foi possível carregar os detalhes.', 'error');
+            }
+
+            const { cabecalho, itens, anexos } = resp.data.data;
+
+            const abaCabecalho = `
+            <p><strong>Documento:</strong> ${cabecalho.documento}</p>
+            <p><strong>Produto:</strong> ${cabecalho.nome_produto}</p>
+            <p><strong>Unidade:</strong> ${cabecalho.nome_unidade}</p>
+            <p><strong>Operador:</strong> ${cabecalho.nome_operador}</p>
+            <p><strong>Data:</strong> ${new Date(cabecalho.data).toLocaleString()}</p>
+            <p><strong>Peso Bruto:</strong> ${cabecalho.peso_bruto} kg</p>
+            <p><strong>Descarte:</strong> ${cabecalho.descarte} kg</p>
+            <p><strong>% Descarte:</strong> ${cabecalho.percentual_descarte}%</p>
+            <p><strong>% Aproveitamento:</strong> ${cabecalho.percentual_aproveitamento}%</p>
+        `;
+
+            const abaItens = itens.map(item => `
+            <p><strong>${item.nome_produto}:</strong> ${item.quantidade} ${item.unidade} (${item.percentual_item}%)</p>
+        `).join('');
+
+            const abaAnexos = anexos.length
+                ? anexos.map(a => `
+                <a href="${a.url}" target="_blank">
+                    <img src="${a.url}" class="rounded shadow object-cover w-full h-40 hover:scale-105 transition" alt="Anexo" />
+                </a>
+            `).join('')
+                : '<p class="text-gray-500">Nenhum anexo disponível.</p>';
+
+            const html = `
+            <div class="mb-4 border-b border-gray-200">
+                <nav class="flex space-x-4" id="tabsNavManipulacao">
+                    <button onclick="ativarTabManipulacao('tab_cabecalho')" class="tab-button text-blue-600 border-b-2 border-blue-600 font-medium py-2 px-4">Cabeçalho</button>
+                    <button onclick="ativarTabManipulacao('tab_itens')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Itens</button>
+                    <button onclick="ativarTabManipulacao('tab_anexos')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Anexos</button>
+                </nav>
+            </div>
+
+            <div id="tabsContentManipulacao">
+                <div id="tab_cabecalho" class="tab-content block space-y-2">${abaCabecalho}</div>
+                <div id="tab_itens" class="tab-content hidden space-y-2">${abaItens}</div>
+                <div id="tab_anexos" class="tab-content hidden grid grid-cols-2 gap-4">${abaAnexos}</div>
+            </div>
+        `;
+
+            document.getElementById('conteudoManipulacao').innerHTML = html;
+            document.getElementById('modalDetalhesManipulacao').classList.remove('hidden');
+        }).catch(() => {
+            Swal.close();
+            Swal.fire('Erro', 'Erro ao buscar detalhes da movimentação.', 'error');
+        });
+    }
+
+    function fecharModal() {
+        document.getElementById('modalDetalhes').classList.add('hidden');
+    }
+
+    function ativarTabManipulacao(tabId) {
+        document.querySelectorAll('#tabsContentManipulacao .tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('#tabsNavManipulacao .tab-button').forEach(el => {
+            el.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600', 'font-medium');
+            el.classList.add('text-gray-600');
+        });
+
+        document.getElementById(tabId)?.classList.remove('hidden');
+        const tabButton = Array.from(document.querySelectorAll('#tabsNavManipulacao .tab-button')).find(btn =>
+            btn.onclick?.toString().includes(tabId)
+        );
+        if (tabButton) {
+            tabButton.classList.add('text-blue-600', 'border-b-2', 'border-blue-600', 'font-medium');
+        }
+    }
+
+    function fecharModalManipulacao() {
+        document.getElementById('modalDetalhesManipulacao').classList.add('hidden');
+    }
+
+
+    function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
 
     function renderGauge(movs) {
         const total = movs.length;
@@ -395,10 +514,34 @@
             operadores.add(m.nome_operador);
         });
 
-        const preencher = (id, itens) => {
+        const preencherUnidades = (id, itens) => {
             const select = document.getElementById(id);
             const atual = select.value;
-            select.innerHTML = `<option value="">Todos</option>`;
+            select.innerHTML = `<option value="">Todas Unidades</option>`;
+            Array.from(itens).sort().forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                select.appendChild(opt);
+            });
+            select.value = atual;
+        };
+        const preencherProduto = (id, itens) => {
+            const select = document.getElementById(id);
+            const atual = select.value;
+            select.innerHTML = `<option value="">Todos Produtos</option>`;
+            Array.from(itens).sort().forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                select.appendChild(opt);
+            });
+            select.value = atual;
+        };
+        const preencherOperadores = (id, itens) => {
+            const select = document.getElementById(id);
+            const atual = select.value;
+            select.innerHTML = `<option value="">Todos Operadores</option>`;
             Array.from(itens).sort().forEach(v => {
                 const opt = document.createElement('option');
                 opt.value = v;
@@ -408,9 +551,9 @@
             select.value = atual;
         };
 
-        preencher('filtroUnidade', unidades);
-        preencher('filtroProduto', produtos);
-        preencher('filtroOperador', operadores);
+        preencherUnidades('filtroUnidade', unidades);
+        preencherProduto('filtroProduto', produtos);
+        preencherOperadores('filtroOperador', operadores);
     }
 
     function getColor(valor) {
