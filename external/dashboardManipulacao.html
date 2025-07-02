@@ -61,7 +61,7 @@
     <div class="bg-white p-6 rounded-lg shadow">
         <h2 class="text-lg font-semibold mb-2">Resultados</h2>
         <div id="gaugesContainer" class="flex flex-row justify-center items-center w-full mt-6 gap-6">
-            <div id="aproveitamentoGauge" style="width: 250px; height: 250px;"></div>
+            <div id="aproveitamentoGauge" style="width: 300px; height: 300px;"></div>
             <div id="gaugeDescarte" style="width: 200px; height: 200px;"></div>
         </div>
 
@@ -131,7 +131,6 @@
         produto: '',
         operador: ''
     };
-
     function atualizarTotalizadores(movs) {
         const total = movs.length;
         const totalBruto = movs.reduce((sum, m) => sum + parseFloat(m.peso_bruto || 0), 0);
@@ -145,13 +144,7 @@
         animateNumber('totalBruto', 0, totalBruto, 1000, false, 2);
         animateNumber('totalDescarte', 0, totalDescarte, 1000, false, 2);
         animateNumber('totalAproveitamento', 0, totalAproveitamento, 1000, false, 2);
-
-        //document.getElementById('percentualBruto').textContent = '100%';
-        //document.getElementById('percentualDescarte').textContent = percDescarte.toFixed(1).replace('.', ',') + '%';
-        //document.getElementById('percentualAproveitamento').textContent = percAproveitamento.toFixed(1).replace('.', ',') + '%';
     }
-
-
     function setRange(tipo) {
         const now = new Date();
         let start = new Date();
@@ -165,7 +158,6 @@
         document.getElementById('endDate').value = format(now);
         loadData();
     }
-
     function animateNumber(id, start, end, duration = 1000, isPercent = false, decimals = 0) {
         const el = document.getElementById(id);
         let startTimestamp = null;
@@ -180,9 +172,6 @@
         };
         requestAnimationFrame(step);
     }
-
-
-
     async function loadData() {
         const start = document.getElementById('startDate').value;
         const end = document.getElementById('endDate').value;
@@ -234,8 +223,6 @@
             console.error(err);
         }
     }
-
-
     function renderTabela(movimentacoes) {
         const tbody = document.getElementById('tabelaMovimentacoes');
         tbody.innerHTML = '';
@@ -260,7 +247,6 @@
             tbody.appendChild(tr);
         });
     }
-
     function abrirModalManipulacao(documento, unit_id) {
         Swal.fire({
             title: 'Carregando detalhes...',
@@ -328,11 +314,9 @@
             Swal.fire('Erro', 'Erro ao buscar detalhes da movimentação.', 'error');
         });
     }
-
     function fecharModal() {
         document.getElementById('modalDetalhes').classList.add('hidden');
     }
-
     function ativarTabManipulacao(tabId) {
         document.querySelectorAll('#tabsContentManipulacao .tab-content').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('#tabsNavManipulacao .tab-button').forEach(el => {
@@ -348,17 +332,12 @@
             tabButton.classList.add('text-blue-600', 'border-b-2', 'border-blue-600', 'font-medium');
         }
     }
-
     function fecharModalManipulacao() {
         document.getElementById('modalDetalhesManipulacao').classList.add('hidden');
     }
-
-
     function capitalize(str) {
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
-
-
     function renderGauge(movs) {
         const total = movs.length;
         const mediaAproveitamento = total
@@ -381,10 +360,10 @@
                 pointer: { show: false },
                 progress: {
                     show: true,
-                    width: 25,
+                    width: 30,
                     itemStyle: { color: corAproveitamento }
                 },
-                axisLine: { lineStyle: { width: 25, color: [[1, '#e0e0e0']] } },
+                axisLine: { lineStyle: { width: 30, color: [[1, '#e0e0e0']] } },
                 axisLabel: { show: false },
                 splitLine: { show: false },
                 axisTick: { show: false },
@@ -428,7 +407,6 @@
             }]
         });
     }
-
     function renderRanking(movs) {
         const operMap = {};
         movs.forEach(m => {
@@ -501,8 +479,6 @@
             container.appendChild(card);
         });
     }
-
-
     function preencherSelects(dados) {
         const unidades = new Set();
         const produtos = new Set();
@@ -555,21 +531,16 @@
         preencherProduto('filtroProduto', produtos);
         preencherOperadores('filtroOperador', operadores);
     }
-
     function getColor(valor) {
         if (valor < 60) return '#ef4444';
         if (valor < 80) return '#f59e0b';
         return '#10b981';
     }
-
     function getInverseColor(value) {
         if (value < 10) return '#4caf50';
         if (value < 20) return '#fbc02d';
         return '#e53935';
     }
-
-
-    // Carrega mês atual ao abrir
     document.addEventListener('DOMContentLoaded', () => {
         setRange('mes');
     });
