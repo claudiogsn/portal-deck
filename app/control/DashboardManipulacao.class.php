@@ -23,7 +23,7 @@ class DashboardManipulacao extends TPage
         $iframe->frameborder = "0";
         $iframe->scrolling = "yes";
         $iframe->width = "100%";
-        $iframe->height = "800px";
+        $iframe->height = "850px";
 
         parent::add($iframe);
     }

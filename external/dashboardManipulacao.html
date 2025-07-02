@@ -217,41 +217,45 @@
         const ranking = Object.values(operMap)
             .map(o => ({
                 ...o,
-                media: o.valores.reduce((a, b) => a + b, 0) / o.valores.length
+                media: o.valores.reduce((a, b) => a + b, 0) / o.valores.length,
+                total: o.valores.length
             }))
             .sort((a, b) => b.media - a.media)
             .slice(0, 3);
 
-        const medalhas = ['🥇', '🥈', '🥉'];
+        const medalhas = [
+            { img: 'https://portal.vemprodeck.com.br/app/images/ranking/st.png', cor: 'bg-yellow-100 text-yellow-800' },
+            { img: 'https://portal.vemprodeck.com.br/app/images/ranking/nd.png', cor: 'bg-gray-200 text-gray-800' },
+            { img: 'https://portal.vemprodeck.com.br/app/images/ranking/rd.png', cor: 'bg-orange-100 text-orange-800' }
+        ];
 
-        const ul = document.getElementById('rankingOperadores');
-        ul.innerHTML = '';
+        const container = document.getElementById('rankingOperadores');
+        container.innerHTML = '';
+        container.className = 'flex justify-center items-end gap-4 w-full';
 
         ranking.forEach((r, i) => {
-            const li = document.createElement('li');
-            li.className = `flex items-center gap-4 p-3 rounded-lg border ${
-                i === 0 ? 'bg-yellow-50 border-yellow-300 text-yellow-800 font-bold text-base shadow' : 'bg-white'
-            }`;
+            const col = document.createElement('div');
+            const altura = [80, 100, 60][i]; // altura do pódio (2º, 1º, 3º)
+            col.className = `flex flex-col items-center justify-end`;
 
-            const fotoUrl = `https://portal.vemprodeck.com.br/app/images/photos/${r.login}.jpg`;
+            col.innerHTML = `
+            <div class="flex flex-col items-center justify-end h-[${altura}px] w-28 rounded-t-lg ${medalhas[i].cor} shadow-md relative pb-3">
+                <img src="${r.login ? `https://portal.vemprodeck.com.br/app/images/photos/${r.login}.jpg` : 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}"
+                    onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png';"
+                    class="w-14 h-14 rounded-full border-2 border-white object-cover -mt-8 z-10 shadow-md"
+                />
+                <div class="text-center mt-2 text-sm font-semibold">${r.nome}</div>
+                <div class="text-xs">${r.media.toFixed(2)}% aproveitamento</div>
+                <div class="text-xs text-gray-600">${r.total} registros</div>
+            </div>
+            <img src="${medalhas[i].img}" class="w-8 h-8 mt-2" />
+        `;
 
-            li.innerHTML = `
-      <img src="${fotoUrl}"
-           onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png';"
-           alt="foto"
-           class="w-12 h-12 rounded-full object-cover border-2 ${
-                i === 0 ? 'border-yellow-400 scale-110' : 'border-gray-300'
-            }"
-      />
-      <div class="flex-1">
-        <div class="flex items-center gap-2">
-          <span class="text-xl">${medalhas[i]}</span>
-          <span>${r.nome}</span>
-        </div>
-        <div class="text-sm text-gray-500 mt-1">${r.media.toFixed(2)}% de aproveitamento</div>
-      </div>
-    `;
-            ul.appendChild(li);
+            container.appendChild(col);
+        });
+    }
+
+    ul.appendChild(li);
         });
     }
 

@@ -3,7 +3,7 @@
   <menuitem label="Business Intelligence (BI)">
     <icon>fas:chart-bar fa-fw</icon>
     <menu>
-      <menuitem label="Aproveitamento de Manbipulação">
+      <menuitem label="Manipulação">
         <action>DashboardManipulacao</action>
         <icon>fas:circle fa-fw</icon>
       </menuitem>
