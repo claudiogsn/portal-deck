@@ -679,6 +679,8 @@ class ManipulacaoController
                         ? round(100 - (($descarte / $pesoBruto) * 100), 2)
                         : 0;
 
+                    $aproveitamento_kg = round($pesoBruto - $descarte, 3);
+
                     // Buscar nome e login do operador
                     $stmtOperador = $pdop->prepare("
                         SELECT name, login FROM system_users WHERE id = :id LIMIT 1
@@ -700,6 +702,7 @@ class ManipulacaoController
                         ':codigo' => $mov['codigo_produto']
                     ]);
                     $nome_produto = $stmtProduto->fetchColumn() ?: '(produto não encontrado)';
+                    $percentual_descarte = 100 - $percentual_aproveitamento;
 
                     // Montar retorno
                     $mov['nome_unidade'] = $nome_unidade;
@@ -707,6 +710,10 @@ class ManipulacaoController
                     $mov['login_operador'] = $login_operador;
                     $mov['nome_produto'] = $nome_produto;
                     $mov['percentual_aproveitamento'] = $percentual_aproveitamento;
+                    $mov['percentual_descarte'] = $percentual_descarte;
+                    $mov['aproveitamento_kg'] = $aproveitamento_kg;
+
+
 
                     $resultado[] = $mov;
                 }

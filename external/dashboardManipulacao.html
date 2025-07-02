@@ -32,15 +32,46 @@
     </select>
 </div>
 
+<!-- Totalizadores de Manipulação -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="text-gray-500 text-sm">Total de Manipulações</div>
+        <div class="text-2xl font-bold" id="totalManipulacoes">0</div>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
+        <div class="text-gray-500 text-sm">Total KG Bruto</div>
+        <div class="text-2xl font-bold" id="totalBruto">0</div>
+<!--        <div class="text-xs text-gray-400" id="percentualBruto">0%</div>-->
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+        <div class="text-gray-500 text-sm">Total KG Descarte</div>
+        <div class="text-2xl font-bold" id="totalDescarte">0</div>
+<!--        <div class="text-xs text-gray-400" id="percentualDescarte">0%</div>-->
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+        <div class="text-gray-500 text-sm">Total KG Aproveitamento</div>
+        <div class="text-2xl font-bold" id="totalAproveitamento">0</div>
+<!--        <div class="text-xs text-gray-400" id="percentualAproveitamento">0%</div>-->
+    </div>
+</div>
+
+
 <!-- Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
     <div class="bg-white p-6 rounded-lg shadow">
-        <h2 class="text-lg font-semibold mb-2">Aproveitamento Médio</h2>
-        <div id="aproveitamentoGauge" style="height: 250px;"></div>
+        <h2 class="text-lg font-semibold mb-2">Resultados</h2>
+        <div id="gaugesContainer" class="flex flex-row justify-center items-center w-full mt-6 gap-6">
+            <div id="aproveitamentoGauge" style="width: 250px; height: 250px;"></div>
+            <div id="gaugeDescarte" style="width: 200px; height: 200px;"></div>
+        </div>
+
+
+
+
     </div>
     <div class="bg-white p-6 rounded-lg shadow">
-        <h2 class="text-lg font-semibold mb-4">Ranking por Operador</h2>
-        <ul id="rankingOperadores" class="space-y-2 text-sm"></ul>
+        <h2 class="text-lg font-semibold mb-4">Ranking</h2>
+        <div class="flex justify-center gap-6 items-end mt-6" id="rankingOperadores"></div>
     </div>
 </div>
 
@@ -51,13 +82,14 @@
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-100">
             <tr>
+                <th class="px-4 py-2 text-left">Unidade</th>
                 <th class="px-4 py-2 text-left">Data</th>
                 <th class="px-4 py-2 text-left">Documento</th>
                 <th class="px-4 py-2 text-left">Produto</th>
-                <th class="px-4 py-2 text-left">Unidade</th>
                 <th class="px-4 py-2 text-left">Operador</th>
                 <th class="px-4 py-2 text-right">Peso (kg)</th>
                 <th class="px-4 py-2 text-right">Descarte (kg)</th>
+                <th class="px-4 py-2 text-right">% Descarte</th>
                 <th class="px-4 py-2 text-right">% Aproveitamento</th>
             </tr>
             </thead>
@@ -83,6 +115,26 @@
         operador: ''
     };
 
+    function atualizarTotalizadores(movs) {
+        const total = movs.length;
+        const totalBruto = movs.reduce((sum, m) => sum + parseFloat(m.peso_bruto || 0), 0);
+        const totalDescarte = movs.reduce((sum, m) => sum + parseFloat(m.descarte || 0), 0);
+        const totalAproveitamento = movs.reduce((sum, m) => sum + parseFloat(m.aproveitamento_kg || 0), 0);
+
+        //const percDescarte = totalBruto > 0 ? (totalDescarte / totalBruto) * 100 : 0;
+        //const percAproveitamento = totalBruto > 0 ? (totalAproveitamento / totalBruto) * 100 : 0;
+
+        animateNumber('totalManipulacoes', 0, total, 1000, false, 0);
+        animateNumber('totalBruto', 0, totalBruto, 1000, false, 2);
+        animateNumber('totalDescarte', 0, totalDescarte, 1000, false, 2);
+        animateNumber('totalAproveitamento', 0, totalAproveitamento, 1000, false, 2);
+
+        //document.getElementById('percentualBruto').textContent = '100%';
+        //document.getElementById('percentualDescarte').textContent = percDescarte.toFixed(1).replace('.', ',') + '%';
+        //document.getElementById('percentualAproveitamento').textContent = percAproveitamento.toFixed(1).replace('.', ',') + '%';
+    }
+
+
     function setRange(tipo) {
         const now = new Date();
         let start = new Date();
@@ -96,6 +148,23 @@
         document.getElementById('endDate').value = format(now);
         loadData();
     }
+
+    function animateNumber(id, start, end, duration = 1000, isPercent = false, decimals = 0) {
+        const el = document.getElementById(id);
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const value = start + (end - start) * progress;
+            el.textContent = isPercent
+                ? value.toFixed(1).replace('.', ',') + '%'
+                : value.toFixed(decimals);
+            if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
+
 
     async function loadData() {
         const start = document.getElementById('startDate').value;
@@ -139,6 +208,8 @@
             renderGauge(filtrados);
             renderRanking(filtrados);
             preencherSelects(dados);
+            atualizarTotalizadores(filtrados);
+
 
         } catch (err) {
             Swal.close();
@@ -155,13 +226,14 @@
         movimentacoes.forEach(m => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
+        <td class="px-4 py-2">${m.nome_unidade}</td>
         <td class="px-4 py-2">${new Date(m.data).toLocaleString()}</td>
         <td class="px-4 py-2">${m.documento}</td>
         <td class="px-4 py-2">${m.nome_produto}</td>
-        <td class="px-4 py-2">${m.nome_unidade}</td>
         <td class="px-4 py-2">${m.nome_operador}</td>
         <td class="px-4 py-2 text-right">${(m.peso_bruto || 0).toFixed(2)}</td>
         <td class="px-4 py-2 text-right">${(m.descarte || 0).toFixed(2)}</td>
+        <td class="px-4 py-2 text-right">${(m.percentual_descarte || 0).toFixed(2)}%</td>
         <td class="px-4 py-2 text-right">${(m.percentual_aproveitamento || 0).toFixed(2)}%</td>
       `;
             tbody.appendChild(tr);
@@ -169,12 +241,20 @@
     }
 
     function renderGauge(movs) {
-        const media = movs.length
-            ? movs.reduce((acc, m) => acc + parseFloat(m.percentual_aproveitamento || 0), 0) / movs.length
+        const total = movs.length;
+        const mediaAproveitamento = total
+            ? movs.reduce((acc, m) => acc + parseFloat(m.percentual_aproveitamento || 0), 0) / total
             : 0;
 
-        const chart = echarts.init(document.getElementById('aproveitamentoGauge'));
-        chart.setOption({
+        const mediaDescarte = total
+            ? movs.reduce((acc, m) => acc + parseFloat(m.percentual_descarte || 0), 0) / total
+            : 0;
+
+        const corAproveitamento = getColor(mediaAproveitamento);
+        const corDescarte = getInverseColor(mediaDescarte);
+
+        // Gauge principal - Aproveitamento
+        echarts.init(document.getElementById('aproveitamentoGauge')).setOption({
             series: [{
                 type: 'gauge',
                 min: 0,
@@ -182,23 +262,49 @@
                 pointer: { show: false },
                 progress: {
                     show: true,
-                    width: 20,
-                    itemStyle: { color: getColor(media) }
+                    width: 25,
+                    itemStyle: { color: corAproveitamento }
                 },
-                axisLine: { lineStyle: { width: 20, color: [[1, '#e0e0e0']] } },
+                axisLine: { lineStyle: { width: 25, color: [[1, '#e0e0e0']] } },
                 axisLabel: { show: false },
                 splitLine: { show: false },
                 axisTick: { show: false },
                 data: [{
-                    value: media.toFixed(2),
+                    value: mediaAproveitamento.toFixed(2),
                     detail: {
                         valueAnimation: true,
                         fontSize: 24,
                         offsetCenter: [0, '0%'],
                         formatter: '{value}%',
-                        color: getColor(media)
+                        color: corAproveitamento
                     },
                     name: 'Aproveitamento'
+                }]
+            }]
+        });
+
+        // Gauge menor - Descarte com cor dinâmica
+        echarts.init(document.getElementById('gaugeDescarte')).setOption({
+            series: [{
+                type: 'gauge',
+                min: 0,
+                max: 100,
+                pointer: { show: false },
+                progress: { show: true, width: 20, itemStyle: { color: corDescarte } },
+                axisLine: { lineStyle: { width: 20, color: [[1, '#f0f0f0']] } },
+                axisLabel: { show: false },
+                splitLine: { show: false },
+                axisTick: { show: false },
+                data: [{
+                    value: mediaDescarte.toFixed(2),
+                    detail: {
+                        valueAnimation: true,
+                        fontSize: 16,
+                        offsetCenter: [0, '0%'],
+                        formatter: '{value}%',
+                        color: corDescarte
+                    },
+                    name: 'Descarte'
                 }]
             }]
         });
@@ -224,38 +330,56 @@
             .slice(0, 3);
 
         const medalhas = [
-            { img: 'https://portal.vemprodeck.com.br/app/images/ranking/st.png', cor: 'bg-yellow-100 text-yellow-800' },
-            { img: 'https://portal.vemprodeck.com.br/app/images/ranking/nd.png', cor: 'bg-gray-200 text-gray-800' },
-            { img: 'https://portal.vemprodeck.com.br/app/images/ranking/rd.png', cor: 'bg-orange-100 text-orange-800' }
+            {
+                img: 'https://portal.vemprodeck.com.br/images/ranking/st.png',
+                cor: 'border-yellow-400',
+                bg: 'bg-yellow-100',
+                destaque: 'ring-4 ring-yellow-300'
+            },
+            {
+                img: 'https://portal.vemprodeck.com.br/images/ranking/nd.png',
+                cor: 'border-gray-400',
+                bg: 'bg-gray-100',
+                destaque: 'ring-4 ring-gray-300'
+            },
+            {
+                img: 'https://portal.vemprodeck.com.br/images/ranking/rd.png',
+                cor: 'border-orange-400',
+                bg: 'bg-orange-100',
+                destaque: 'ring-4 ring-orange-300'
+            }
         ];
 
         const container = document.getElementById('rankingOperadores');
         container.innerHTML = '';
-        container.className = 'flex justify-center items-end gap-4 w-full';
+        container.className = 'flex justify-center gap-6 items-end mt-6';
 
         ranking.forEach((r, i) => {
-            const col = document.createElement('div');
-            const altura = [80, 100, 60][i]; // altura do pódio (2º, 1º, 3º)
-            col.className = `flex flex-col items-center justify-end`;
+            const card = document.createElement('div');
+            const isPrimeiro = i === 0;
 
-            col.innerHTML = `
-            <div class="flex flex-col items-center justify-end h-[${altura}px] w-28 rounded-t-lg ${medalhas[i].cor} shadow-md relative pb-3">
-                <img src="${r.login ? `https://portal.vemprodeck.com.br/app/images/photos/${r.login}.jpg` : 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}"
-                    onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png';"
-                    class="w-14 h-14 rounded-full border-2 border-white object-cover -mt-8 z-10 shadow-md"
-                />
-                <div class="text-center mt-2 text-sm font-semibold">${r.nome}</div>
-                <div class="text-xs">${r.media.toFixed(2)}% aproveitamento</div>
-                <div class="text-xs text-gray-600">${r.total} registros</div>
-            </div>
-            <img src="${medalhas[i].img}" class="w-8 h-8 mt-2" />
+            card.className = `
+                ${medalhas[i].bg} rounded-xl shadow-md border border-gray-200 flex flex-col items-center text-center p-5 relative
+                ${medalhas[i].destaque} ${i === 0 ? 'scale-110 w-80 order-2' : 'scale-95 w-64 ' + (i === 1 ? 'order-1' : 'order-3')}
+                transition-all duration-300
+            `;
+
+
+            const fotoUrl = `https://portal.vemprodeck.com.br/app/images/photos/${r.login}.jpg`;
+
+            card.innerHTML = `
+            <img src="${medalhas[i].img}" class="w-20 h-20 absolute -top-10 left-1/2 transform -translate-x-1/2 bg-transparent rounded-full p-1" />
+            <img src="${fotoUrl}"
+                onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png';"
+                class="w-20 h-20 rounded-full object-cover border-4 ${medalhas[i].cor} ${medalhas[i].destaque} mt-6"
+            />
+            <h3 class="mt-4 font-semibold text-lg">${r.nome}</h3>
+            <p class="text-sm text-gray-500">${r.total} Manipulações</p>
+            <p class="mt-2 text-xl font-bold text-gray-800">${r.media.toFixed(2)}%</p>
+            <p class="text-sm text-gray-400">de aproveitamento</p>
         `;
 
-            container.appendChild(col);
-        });
-    }
-
-    ul.appendChild(li);
+            container.appendChild(card);
         });
     }
 
@@ -294,6 +418,13 @@
         if (valor < 80) return '#f59e0b';
         return '#10b981';
     }
+
+    function getInverseColor(value) {
+        if (value < 10) return '#4caf50';
+        if (value < 20) return '#fbc02d';
+        return '#e53935';
+    }
+
 
     // Carrega mês atual ao abrir
     document.addEventListener('DOMContentLoaded', () => {
