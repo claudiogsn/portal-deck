@@ -525,7 +525,7 @@
                 productsInBalance = [];
                 $('#finalizarLancamento').prop('disabled', true);
 
-                window.location.href = `${baseUrlRedirect}/external/listModelCompras.html?username=${username}&token=${token}&unit_id=${unitId}`;
+                window.location.href = `${baseUrlRedirect}/external/listModeloCompras.html?username=${username}&token=${token}&unit_id=${unitId}`;
               });
             } else {
               Swal.fire('Erro!', response.data.message || 'Erro ao finalizar lançamento.', 'error');

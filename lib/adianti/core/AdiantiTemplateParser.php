@@ -70,7 +70,7 @@ class AdiantiTemplateParser
         $content   = str_replace('{usermail}',  (string) TSession::getValue('usermail'), $content);
         $content   = str_replace('{frontpage}', (string) TSession::getValue('frontpage'), $content);
         $content   = str_replace('{userunitid}', (string) TSession::getValue('userunitid'), $content);
-        $content = str_replace('{userunitname}', $userUnitName ?: 'Selecione Unidade', $content);
+        $content   = str_replace('{userunitname}', $userUnitName ?: 'Selecione Unidade', $content);
         $content   = str_replace('{query_string}', $_SERVER["QUERY_STRING"] ?? '', $content);
         $content   = str_replace('{use_tabs}', $use_tabs, $content);
         $content   = str_replace('{store_tabs}', $store_tabs, $content);
