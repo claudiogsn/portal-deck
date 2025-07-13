@@ -59,15 +59,18 @@ $(document).ready(function () {
         selectedDocs = [];  // Reinicializar a lista de documentos selecionados
 
         balances.forEach(balanco => {
+            const dataHora = new Date(balanco.created_at);
+            dataHora.setHours(dataHora.getHours() - 5); // Ajuste de fuso horário UTC-5
+
             const row = $(`
-                <tr>
-                    <td><input type="checkbox" id="balanco-${balanco.doc}" class="chk-col-blue balanco-checkbox" data-doc="${balanco.doc}"><label for="balanco-${balanco.doc}"> </label></td>
-                    <td>${balanco.doc}</td>
-                    <td>${balanco.tipo_mov}</td>
-                    <td>${new Date(balanco.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                    <td><button class="btn btn-info btnDetalhes" data-doc="${balanco.doc}">Ver Detalhes</button></td>
-                </tr>
-            `);
+            <tr>
+                <td><input type="checkbox" id="balanco-${balanco.doc}" class="chk-col-blue balanco-checkbox" data-doc="${balanco.doc}"><label for="balanco-${balanco.doc}"> </label></td>
+                <td>${balanco.doc}</td>
+                <td>${balanco.tipo_mov}</td>
+                <td>${dataHora.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                <td><button class="btn btn-info btnDetalhes" data-doc="${balanco.doc}">Ver Detalhes</button></td>
+            </tr>
+        `);
 
             tbody.append(row);
 
@@ -98,6 +101,7 @@ $(document).ready(function () {
             loadDetalhesBalanco(doc);
         });
     }
+
 
     // Carregar detalhes do balanço
     async function loadDetalhesBalanco(doc) {

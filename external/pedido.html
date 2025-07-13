@@ -340,13 +340,14 @@
         document.getElementById('itemModal').classList.remove('active');
     }
 
-    function selecionarItem(codigo, descricao, unidade, preco) {
+    function selecionarItem(codigo, descricao, unidade, preco, categoria) {
         selectedItem = {
             id: codigo,
             codigo: codigo,
             descricao: descricao,
             unidade: unidade,
-            preco: parseFloat(preco) || 0
+            preco: parseFloat(preco) || 0,
+            categoria: categoria || 'Sem Categoria'
         };
 
         document.getElementById('item-description').value = descricao;
@@ -356,6 +357,9 @@
         document.getElementById('total-label').textContent = 'R$ 0,00';
         fecharModal();
         document.getElementById('item-quantity').focus();
+
+        console.log('Item selecionado:', selectedItem);
+
     }
 
     function removerItem(btn) {
@@ -455,7 +459,7 @@
                     <div>${item.nome_produto}</div>
                     <div>${item.und_produto}</div>
                     <div>${formatarMoeda(preco)}</div>
-                    <div><div class="action-btn" onclick="selecionarItem('${item.id_produto}', '${item.nome_produto}', '${item.und_produto}', '${preco}')">+</div></div>
+                    <div><div class="action-btn" onclick="selecionarItem('${item.id_produto}', '${item.nome_produto}', '${item.und_produto}', '${preco}', '${categoria}')">+</div></div>
                 `;
                 categoryItems.appendChild(row);
             });
@@ -521,21 +525,22 @@
             }
 
             const total = quantidade * selectedItem.preco;
-
             const observacao = document.getElementById('observacao').value.trim();
 
             const row = document.createElement('div');
             row.className = 'grid-row';
-            row.dataset.idProduto = selectedItem.id;
-            row.dataset.observacao = observacao;
+            row.dataset.idProduto   = selectedItem.id;
+            row.dataset.observacao  = observacao;
+            row.dataset.categoria   = selectedItem.categoria || 'Sem Categoria'; // ← aqui!
+
             row.innerHTML = `
-                <div onclick="mostrarObservacao(this)" class="item-descricao" data-observacao="${observacao || ''}">
-                    ${selectedItem.descricao}
-                </div>
-                <div>${quantidade} ${selectedItem.unidade}</div>
-                <div>${formatarMoeda(total)}</div>
-                <div><div class="action-btn action-btn-danger" onclick="removerItem(this)">X</div></div>
-            `;
+        <div onclick="mostrarObservacao(this)" class="item-descricao" data-observacao="${observacao || ''}">
+            ${selectedItem.descricao}
+        </div>
+        <div>${quantidade} ${selectedItem.unidade}</div>
+        <div>${formatarMoeda(total)}</div>
+        <div><div class="action-btn action-btn-danger" onclick="removerItem(this)">X</div></div>
+    `;
 
             document.getElementById('result-table-body').appendChild(row);
 
@@ -551,12 +556,14 @@
                 codigo: null,
                 descricao: null,
                 unidade: null,
-                preco: 0
+                preco: 0,
+                categoria: null
             };
 
             // Atualizar total
             atualizarTotalizador();
         });
+
 
 
 
@@ -612,6 +619,7 @@
                     .replace('R$', '').replace(',', '.').trim();
                 const preco = parseFloat(precoTexto);
                 const observacao = row.dataset.observacao || '';
+                const categoria = row.dataset.categoria || 'Sem Categoria';
 
 
                 if (id_produto && produto && !isNaN(quantidade)) {
@@ -621,7 +629,8 @@
                         observacao,
                         seq: index + 1,
                         quantidade,
-                        preco
+                        preco,
+                        categoria
                     });
                 }
             });

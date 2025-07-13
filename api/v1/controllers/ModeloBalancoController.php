@@ -856,17 +856,20 @@ class ModeloBalancoController
 
             // Inserir os novos itens
             $stmtItem = $pdo->prepare("
-            INSERT INTO modelos_compras_itens (id_modelo, system_unit_id, id_produto, created_at, updated_at)
-            VALUES (?, ?, ?, NOW(), NOW())
-        ");
+                INSERT INTO modelos_compras_itens (id_modelo, system_unit_id, id_produto, created_at, updated_at)
+                SELECT ?, ?, id, NOW(), NOW() 
+                FROM products 
+                WHERE codigo = ? AND system_unit_id = ?
+            ");
 
             foreach ($itens as $item) {
                 if (!isset($item['codigo'])) {
                     self::sendResponse(false, "O campo 'codigo' é obrigatório para cada item.", [], 400);
                 }
+
                 $codigo_produto = $item['codigo'];
 
-                $stmtItem->execute([$modelo_id, $system_unit_id, $codigo_produto]);
+                $stmtItem->execute([$modelo_id, $system_unit_id, $codigo_produto, $system_unit_id]);
 
                 if ($stmtItem->rowCount() <= 0) {
                     self::sendResponse(false, "Falha ao inserir item no modelo de compras.", [], 500);

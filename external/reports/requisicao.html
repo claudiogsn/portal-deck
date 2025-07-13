@@ -94,7 +94,7 @@
               ${item.produto}
               ${item.observacao ? `<br><small><strong>Observação:</strong> ${item.observacao}</small>` : ''}
             </td>
-            <td>${item.categoria_nome || '-'}</td>
+            <td>${item.categoria_nome || item.categoria || '-'}</td>
             <td>${item.quantidade}</td>
             <td>${formatarValor(item.preco)}</td>
           </tr>
