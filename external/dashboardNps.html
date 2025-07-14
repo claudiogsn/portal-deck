@@ -34,6 +34,11 @@
         <option value="neutro">Neutros (7–8)</option>
         <option value="promotor">Promotores (9–10)</option>
     </select>
+    <select id="filtroModoVenda" class="border p-2 rounded-md shadow" onchange="fetchData()">
+        <option value="">Todos os Modos</option>
+        <option value="DELIVERY">Delivery</option>
+        <option value="MESA">Mesa</option>
+    </select>
 </div>
 
 <!-- Totalizadores -->
@@ -84,6 +89,7 @@
             <thead class="bg-gray-100">
             <tr>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Loja</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Modo Venda</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comentário</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
             </tr>
@@ -155,7 +161,8 @@
         dt_fim: '',
         loja: '',
         pergunta: '',
-        nota: ''
+        nota: '',
+        modo_venda: ''
     };
 
     function fecharModal() {
@@ -254,12 +261,13 @@
 
     // === Processar e calcular NPS ===
     function processarNPS(respostas) {
-        const { loja, pergunta, nota } = filtros;
+        const { loja, pergunta, nota, modo_venda } = filtros;
 
         const filtrado = respostas.filter(r => {
             if (r.metodo_resposta !== 'nota') return false;
             if (loja && r.nome_loja !== loja) return false;
             if (pergunta && r.pergunta !== pergunta) return false;
+            if (modo_venda && r.modo_venda !== modo_venda) return false;
 
             const notaInt = parseInt(r.resposta);
             if (nota === 'detrator' && (notaInt < 0 || notaInt > 6)) return false;
@@ -462,28 +470,36 @@
     }
 
     function renderTabelaComentarios(respostas) {
-        const { loja } = filtros;
+        const { loja, modo_venda, pergunta, nota } = filtros;
         const container = document.getElementById('comentariosNpsTable');
         container.innerHTML = '';
 
-        // Aplica filtro de loja se definido
-        const respostasFiltradas = loja
-            ? respostas.filter(r => r.nome_loja === loja)
-            : respostas;
-
+        // Agrupamento por chave_pedido
         const agrupado = {};
-        respostasFiltradas.forEach(r => {
+
+        respostas.forEach(r => {
             if (!agrupado[r.chave_pedido]) agrupado[r.chave_pedido] = [];
             agrupado[r.chave_pedido].push(r);
         });
 
         Object.values(agrupado).forEach(grupo => {
             const comentario = grupo.find(r => r.metodo_resposta === 'texto');
-            console.log(comentario);
-            console.log('-----------------');
-            console.log('-----------------');
-            console.log(grupo);
             if (!comentario) return;
+
+            // Aplica todos os filtros ativos
+            if (loja && comentario.nome_loja !== loja) return;
+            if (modo_venda && comentario.modo_venda !== modo_venda) return;
+            if (pergunta && !grupo.some(r => r.pergunta === pergunta)) return;
+
+            if (nota) {
+                const respostaNota = grupo.find(r => r.metodo_resposta === 'nota');
+                if (!respostaNota) return;
+
+                const n = parseInt(respostaNota.resposta);
+                if (nota === 'detrator' && (n < 0 || n > 6)) return;
+                if (nota === 'neutro' && (n < 7 || n > 8)) return;
+                if (nota === 'promotor' && (n < 9 || n > 10)) return;
+            }
 
             const tooltipContent = grupo
                 .map(r => `<strong>${r.pergunta}:</strong> ${r.resposta}`)
@@ -491,9 +507,10 @@
 
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50 cursor-pointer';
-            row.onclick = () => carregarDetalhesDoPedido(comentario.chave_pedido);
+            row.onclick = () => carregarDetalhesDoPedido(comentario.chave_pedido, comentario.modo_venda);
             row.innerHTML = `
             <td class="px-4 py-2 text-sm text-gray-700">${comentario.nome_loja}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">${comentario.modo_venda}</td>
             <td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">
                 <span class="comentario-tooltip" data-tippy-content="${tooltipContent}">
                     ${comentario.resposta}
@@ -513,6 +530,7 @@
             delay: [200, 100],
         });
     }
+
 
     function renderizarMapaResposta(lat, lng, divId = 'mapaResposta') {
         if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
@@ -534,101 +552,115 @@
         }, 500);
     }
 
-    function carregarDetalhesDoPedido(chave) {
+    function carregarDetalhesDoPedido(chave, modoVenda) {
         Swal.fire({
             title: 'Carregando detalhes...',
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading()
         });
 
+        const method = (modoVenda === 'MESA') ? 'GetDetalhesMesa' : 'GetDetalhesDoPedido';
+
         axios.post(baseUrl, {
-            method: 'GetDetalhesDoPedido',
+            method: method,
             data: { chave_pedido: chave }
         }).then(resp => {
             Swal.close();
 
-            if (!resp.data.success || !resp.data.pedido) {
-                return Swal.fire('Erro', 'Não foi possível carregar os detalhes.', 'error');
-            }
-
-            const p = resp.data.pedido;
             const respostas = resp.data.respostas || [];
-            const parada = (resp.data.paradas || [])[0];
-            const whatsapp = resp.data.whatsapp_mensagem;
-            const nps = resp.data.mensagem_nps;
 
-            let extraInfoHtml = '';
-            let lat, lng, temCoords = false;
-
-            if (respostas.length > 0) {
-                const r = respostas[0];
-                lat = parseFloat(r.latitude);
-                lng = parseFloat(r.longitude);
-                temCoords = !isNaN(lat) && !isNaN(lng);
-
-                extraInfoHtml = `
-                <p><strong>IP:</strong> ${r.ip || '---'}</p>
-                <p><strong>Dispositivo:</strong> ${r.tipo_dispositivo || '---'}</p>
-                <p><strong>Plataforma:</strong> ${r.plataforma || '---'}</p>
-                <p><strong>Latitude / Longitude:</strong> ${r.latitude || '---'} / ${r.longitude || '---'}</p>
-                ${temCoords ? `<div id="mapaResposta" style="width: 100%; height: 250px;" class="mt-4 rounded"></div>` : ''}
-            `;
+            if (!respostas.length) {
+                return Swal.fire('Erro', 'Não foi possível carregar as respostas.', 'error');
             }
+
+            let lat, lng, temCoords = false;
+            let extraInfoHtml = '';
+
+            const r = respostas[0];
+            lat = parseFloat(r.latitude);
+            lng = parseFloat(r.longitude);
+            temCoords = !isNaN(lat) && !isNaN(lng);
+
+            extraInfoHtml = `
+            <p><strong>IP:</strong> ${r.ip || '---'}</p>
+            <p><strong>Dispositivo:</strong> ${r.tipo_dispositivo || '---'}</p>
+            <p><strong>Plataforma:</strong> ${r.plataforma || '---'}</p>
+            <p><strong>Latitude / Longitude:</strong> ${r.latitude || '---'} / ${r.longitude || '---'}</p>
+            ${temCoords ? `<div id="mapaResposta" style="width: 100%; height: 250px;" class="mt-4 rounded"></div>` : ''}
+        `;
 
             const respostasHtml = respostas.map(r => `
             <li class="text-sm text-gray-700"><strong>${r.pergunta}:</strong> ${r.resposta ?? '---'}</li>
         `).join('');
 
-            const detalhesHtml = `
-            <div>
-                <!-- Abas -->
-                <div class="mb-4 border-b border-gray-200">
-                    <nav class="flex space-x-4" id="tabsNav">
-                        <button onclick="ativarTab('tab_respostas')" class="tab-button text-blue-600 border-b-2 border-blue-600 font-medium py-2 px-4">Respostas</button>
-                        <button onclick="ativarTab('tab_pedido')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Pedido</button>
-                        <button onclick="ativarTab('tab_entrega')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Entrega</button>
-                        <button onclick="ativarTab('tab_disparos')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Disparos</button>
-                    </nav>
+            // Tabs padrão (respostas sempre)
+            let tabsNavHtml = `
+            <button onclick="ativarTab('tab_respostas')" class="tab-button text-blue-600 border-b-2 border-blue-600 font-medium py-2 px-4">Respostas</button>
+        `;
+            let tabsContentHtml = `
+            <div id="tab_respostas" class="tab-content block">
+                <ul class="list-disc list-inside space-y-1 mb-4">${respostasHtml}</ul>
+                ${extraInfoHtml}
+            </div>
+        `;
+
+            if (modoVenda !== 'MESA') {
+                const p = resp.data.pedido;
+                const parada = (resp.data.paradas || [])[0];
+                const whatsapp = resp.data.whatsapp_mensagem;
+                const nps = resp.data.mensagem_nps;
+
+                tabsNavHtml += `
+                <button onclick="ativarTab('tab_pedido')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Pedido</button>
+                <button onclick="ativarTab('tab_entrega')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Entrega</button>
+                <button onclick="ativarTab('tab_disparos')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Disparos</button>
+            `;
+
+                tabsContentHtml += `
+                <div id="tab_pedido" class="tab-content hidden">
+                    <p><strong>Chave:</strong> ${p.chave_pedido}</p>
+                    <p><strong>Cliente:</strong> ${p.identificador_conta}</p>
+                    <p><strong>Data:</strong> ${p.hora_abertura} → ${p.hora_saida}</p>
+                    <p><strong>Status:</strong> ${p.status_pedido}</p>
+                    <p><strong>Modo:</strong> ${p.modo_de_conta}</p>
+                    <p><strong>Tipo Entrega:</strong> ${p.tipo_entrega}</p>
                 </div>
 
+                <div id="tab_entrega" class="tab-content hidden">
+                    ${parada ? `
+                        <p><strong>Endereço:</strong> ${parada.endereco}, ${parada.bairro} - ${parada.cidade}/${parada.uf}</p>
+                        <p><strong>Motoboy:</strong> ${whatsapp?.nome_taxista || '---'} - <strong>Placa:</strong> ${whatsapp?.placa_veiculo || '---'}</p>
+                        <p><strong>Link de rastreio:</strong> <a href="${parada.link_rastreio_pedido}" target="_blank" class="text-blue-600 underline">${parada.link_rastreio_pedido}</a></p>
+                    ` : '<p>Sem dados de entrega.</p>'}
+                </div>
+
+                <div id="tab_disparos" class="tab-content hidden">
+                    ${whatsapp ? `
+                        <p><strong>WhatsApp:</strong> ${whatsapp.telefone}</p>
+                        <p><strong>Status:</strong> ${whatsapp.message_status}</p>
+                        <p><strong>Hora Disparo:</strong> ${whatsapp.created_at || '---'}</p>
+                        <p><strong>Link de rastreio:</strong> <a href="${whatsapp.link_rastreio}" target="_blank" class="text-blue-600 underline">${whatsapp.link_rastreio}</a></p>
+                    ` : '<p>Sem disparo WhatsApp.</p>'}
+
+                    ${nps ? `
+                        <p><strong>NPS:</strong> ${nps.telefone}</p>
+                        <p><strong>Status:</strong> ${nps.message_status}</p>
+                        <p><strong>Hora Disparo:</strong> ${nps.created_at || '---'}</p>
+                        <p><strong>Link:</strong> <a href="${nps.link_nps}" target="_blank" class="text-blue-600 underline">${nps.link_nps}</a></p>
+                    ` : '<p>Sem disparo NPS.</p>'}
+                </div>
+            `;
+            }
+
+            const detalhesHtml = `
+            <div>
+                <div class="mb-4 border-b border-gray-200">
+                    <nav class="flex space-x-4" id="tabsNav">
+                        ${tabsNavHtml}
+                    </nav>
+                </div>
                 <div id="tabsContent">
-                    <div id="tab_respostas" class="tab-content block">
-                        <ul class="list-disc list-inside space-y-1 mb-4">${respostasHtml}</ul>
-                        ${extraInfoHtml}
-                    </div>
-
-                    <div id="tab_pedido" class="tab-content hidden">
-                        <p><strong>Chave:</strong> ${p.chave_pedido}</p>
-                        <p><strong>Cliente:</strong> ${p.identificador_conta}</p>
-                        <p><strong>Data:</strong> ${p.hora_abertura} → ${p.hora_saida}</p>
-                        <p><strong>Status:</strong> ${p.status_pedido}</p>
-                        <p><strong>Modo:</strong> ${p.modo_de_conta}</p>
-                        <p><strong>Tipo Entrega:</strong> ${p.tipo_entrega}</p>
-                    </div>
-
-                    <div id="tab_entrega" class="tab-content hidden">
-                        ${parada ? `
-                            <p><strong>Endereço:</strong> ${parada.endereco}, ${parada.bairro} - ${parada.cidade}/${parada.uf}</p>
-                            <p><strong>Motoboy:</strong> ${whatsapp?.nome_taxista || '---'} - <strong>Placa:</strong> ${whatsapp?.placa_veiculo || '---'}</p>
-                            <p><strong>Link de rastreio:</strong> <a href="${parada.link_rastreio_pedido}" target="_blank" class="text-blue-600 underline">${parada.link_rastreio_pedido}</a></p>
-                        ` : '<p>Sem dados de entrega.</p>'}
-                    </div>
-
-                    <div id="tab_disparos" class="tab-content hidden">
-                        ${whatsapp ? `
-                            <p><strong>WhatsApp:</strong> ${whatsapp.telefone}</p>
-                            <p><strong>Status:</strong> ${whatsapp.message_status}</p>
-                            <p><strong>Hora Disparo:</strong> ${whatsapp.created_at || '---'}</p>
-                            <p><strong>Link de rastreio:</strong> <a href="${whatsapp.link_rastreio}" target="_blank" class="text-blue-600 underline">${whatsapp.link_rastreio}</a></p>
-                        ` : '<p>Sem disparo WhatsApp.</p>'}
-
-                        ${nps ? `
-                            <p><strong>NPS:</strong> ${nps.telefone}</p>
-                            <p><strong>Status:</strong> ${nps.message_status}</p>
-                            <p><strong>Hora Disparo:</strong> ${nps.created_at || '---'}</p>
-                            <p><strong>Link:</strong> <a href="${nps.link_nps}" target="_blank" class="text-blue-600 underline">${nps.link_nps}</a></p>
-                        ` : '<p>Sem disparo NPS.</p>'}
-                    </div>
+                    ${tabsContentHtml}
                 </div>
             </div>
         `;
@@ -664,7 +696,6 @@
     }
 
 
-
     // === Carregar filtros externos ===
     async function carregarEstabelecimentos() {
         try {
@@ -692,7 +723,7 @@
     async function carregarPerguntas() {
         try {
             const response = await axios.post(baseUrl, {
-                method: 'ListQuestionsActive',
+                method: 'ListQuestionsActiveDash',
                 data: { formulario: 'nps_delivery_deck',tipo: 'nota' }
             });
 
@@ -729,6 +760,11 @@
 
         document.getElementById('filtroNota').addEventListener('change', (e) => {
             filtros.nota = e.target.value;
+            carregarDashboardNps();
+        });
+
+        document.getElementById('filtroModoVenda').addEventListener('change', (e) => {
+            filtros.modo_venda = e.target.value;
             carregarDashboardNps();
         });
 

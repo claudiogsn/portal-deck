@@ -80,12 +80,30 @@ class MesaController
     {
         global $pdo;
 
-        $stmt = $pdo->prepare("SELECT id, numero_mesa, identificador, created_at FROM mesas_identificadas WHERE identificador = :identificador");
+        $stmt = $pdo->prepare("
+        SELECT 
+            m.id,
+            m.numero_mesa,
+            m.identificador,
+            m.created_at,
+            su.name AS unidade_nome
+        FROM mesas_identificadas AS m
+        LEFT JOIN system_unit AS su ON su.id = m.system_unit_id
+        WHERE m.identificador = :identificador
+    ");
         $stmt->bindParam(':identificador', $identificador, PDO::PARAM_STR);
         $stmt->execute();
         $mesas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return ['success' => true, 'mesas' => $mesas];
+        if (empty($mesas)) {
+            http_response_code(400);
+            return ['error' => 'Mesa não encontrada para o identificador informado.'];
+        }
+
+        // Se quiser retornar apenas uma mesa (caso o identificador seja único), retorne só o primeiro elemento
+        return count($mesas) === 1 ? $mesas[0] : $mesas;
     }
+
+
 }
 ?>

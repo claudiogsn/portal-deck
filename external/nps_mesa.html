@@ -66,6 +66,8 @@
             'https://portal.vemprodeck.com.br/api/v1/index.php' :
             'http://localhost/portal-deck/api/v1/index.php';
 
+    let nomeLoja = '';
+
     // === Captura geolocalização ===
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -98,7 +100,6 @@
 
     async function carregarFormulario() {
       let loading;
-      try {
         loading = Swal.fire({
           title: 'Carregando...',
           text: 'Por favor, aguarde',
@@ -111,14 +112,18 @@
           data: { chave_mesa: chave_mesa }
         });
 
-        const mesa = mesaResponse.data?.mesa || mesaResponse.data;
+        const mesa = mesaResponse.data;
+        nomeLoja = mesa.unidade_nome;
 
         document.getElementById('titulo').innerText =
-                `Olá, você está avaliando o pedido #${pedido.cod_iapp || '-'}, realizado no dia ${formatarData(pedido.hora_abertura || new Date())}.`;
+                `Olá, você está avaliando a loja ${mesa.unidade_nome}, na mesa ${(mesa.numero_mesa)}.`;
 
         const response = await axios.post(baseUrl, {
           method: 'ListQuestionsActive',
-          data: { formulario }
+          data: {
+            formulario,
+            modo_venda: 'mesa',
+          }
         });
 
         Swal.close();
@@ -136,9 +141,6 @@
             `;
           container.appendChild(div);
         });
-      } catch (err) {
-        Swal.fire('Erro', 'Erro ao carregar perguntas ou verificar envio.', 'error');
-      }
     }
 
     function gerarInput(p) {
@@ -214,7 +216,7 @@
     async function uploadArquivo(arquivo, perguntaId) {
       const form = new FormData();
       const sufixo = Math.floor(Math.random() * 90 + 10);
-      const nomeArquivo = `${chavePedido}-${perguntaId}-${sufixo}`;
+      const nomeArquivo = `${chave_mesa}-${perguntaId}-${sufixo}`;
       form.append('file', arquivo);
       form.append('nome', nomeArquivo);
 
@@ -246,7 +248,7 @@
           } else {
             respostas.push({
               pergunta_id: perguntaId,
-              resposta: value === '' ? null : value
+              resposta: value === '' ? null : value,
             });
           }
         }
@@ -257,9 +259,11 @@
 
       try {
         const response = await axios.post(baseUrl, {
-          method: 'CreateRespostas',
+          method: 'CreateRespostasMesa',
           data: {
-            chave_pedido: chavePedido,
+            chave_mesa: chave_mesa,
+            nome_loja: nomeLoja,
+            cnpj: '00000000000000',
             respostas,
             latitude,
             longitude
