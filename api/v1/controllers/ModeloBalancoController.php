@@ -909,7 +909,7 @@ class ModeloBalancoController
             rc.updated_at,
             rc.solicitante_nome,
             (
-                SELECT SUM(COALESCE(ri.preco, 0) * ri.quantidade)
+                SELECT SUM(ri.preco)
                 FROM requisicao_compras_itens ri
                 WHERE ri.requisicao_id = rc.id
             ) AS valor_total
