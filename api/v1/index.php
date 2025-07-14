@@ -47,6 +47,7 @@ require_once 'controllers/BiController.php';
 require_once 'controllers/ComprasController.php';
 require_once 'controllers/ManipulacaoController.php';
 require_once 'controllers/UserController.php';
+require_once 'controllers/MesasController.php';
 
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -88,6 +89,9 @@ if (isset($data['method']) && isset($data['data'])) {
         'getUnitsByGroup',
         'registerJobExecution',
         'persistSales',
+        'getMesaByChave',
+        'ListMesasByUnit',
+        'CreateMesa',
         'consolidateSalesByGroup'];
 
     if (!in_array($method, $noAuthMethods)) {
@@ -994,6 +998,34 @@ if (isset($data['method']) && isset($data['data'])) {
                     $response = ['error' => 'Parâmetro user ausente'];
                 }
                 break;
+
+                // Métodos para MesaController
+            case 'CreateMesa':
+                if (isset($requestData['numero_mesa'], $requestData['system_unit_id'])) {
+                    $response = MesaController::criarMesa($requestData['numero_mesa'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    throw new Exception("Missing required fields: numero_mesa and/or system_unit_id.");
+                }
+                break;
+
+            case 'ListMesasByUnit':
+                if (isset($requestData['system_unit_id'])) {
+                    $response = MesaController::listarMesasPorUnidade($requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    throw new Exception("Missing required field: system_unit_id.");
+                }
+                break;
+            case 'getMesaByChave':
+                if (isset($requestData['chave_mesa'])) {
+                    $response = MesaController::getMesaByChave($requestData['chave_mesa']);
+                } else {
+                    http_response_code(400);
+                    throw new Exception("Missing required field: chave_mesa.");
+                }
+                break;
+
             default:
                 http_response_code(405);
                 $response = ['error' => 'Método não suportado'];

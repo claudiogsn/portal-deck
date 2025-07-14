@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pesquisa de Satisfação - Deck Delivery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    .estrela-wrapper {
+      direction: ltr;
+    }
+
+    .estrela {
+      color: #d1d5db;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: color 0.2s;
+      position: relative;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .estrela .numero {
+      position: absolute;
+      top: 1.1rem;
+      color: white;
+      font-size: 0.1rem;
+      font-weight: bold;
+    }
+
+    .estrela.ativa {
+      color: #f59e0b;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-4">
+<div class="max-w-xl mx-auto bg-white rounded-xl shadow-md p-6">
+  <div class="flex justify-center mb-4">
+    <img src="https://vemprodeck.com.br/choppgratis/deck.png" alt="Logo Deck" class="w-32 md:w-40 mx-auto">
+  </div>
+  <h1 id="titulo" class="text-xl font-semibold text-center text-gray-800 mb-4"></h1>
+  <form id="npsForm" class="space-y-4">
+    <div id="perguntas"></div>
+    <input type="hidden" name="latitude" id="latitude">
+    <input type="hidden" name="longitude" id="longitude">
+    <button type="submit" class="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600">Enviar Respostas</button>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const chave_mesa = new URLSearchParams(window.location.search).get('chave');
+    const formulario = 'nps_delivery_deck';
+
+    const baseUrl = window.location.hostname !== 'localhost'
+            ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
+            : 'http://localhost/dispatch-bot-api/index.php';
+
+    const baseUrlPortal = window.location.hostname !== 'localhost' ?
+            'https://portal.vemprodeck.com.br/api/v1/index.php' :
+            'http://localhost/portal-deck/api/v1/index.php';
+
+    // === Captura geolocalização ===
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+              function (position) {
+                const latInput = document.getElementById('latitude');
+                const lonInput = document.getElementById('longitude');
+                if (latInput && lonInput) {
+                  latInput.value = position.coords.latitude;
+                  lonInput.value = position.coords.longitude;
+                }
+              },
+              function (error) {
+                console.warn("Erro ao obter localização:", error.message);
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+              }
+      );
+    }
+
+    function formatarData(dataString) {
+      const data = new Date(dataString);
+      return data.toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    async function carregarFormulario() {
+      let loading;
+      try {
+        loading = Swal.fire({
+          title: 'Carregando...',
+          text: 'Por favor, aguarde',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        const mesaResponse = await axios.post(baseUrlPortal, {
+          method: 'getMesaByChave',
+          data: { chave_mesa: chave_mesa }
+        });
+
+        const mesa = mesaResponse.data?.mesa || mesaResponse.data;
+
+        document.getElementById('titulo').innerText =
+                `Olá, você está avaliando o pedido #${pedido.cod_iapp || '-'}, realizado no dia ${formatarData(pedido.hora_abertura || new Date())}.`;
+
+        const response = await axios.post(baseUrl, {
+          method: 'ListQuestionsActive',
+          data: { formulario }
+        });
+
+        Swal.close();
+
+        const perguntas = response.data;
+        const container = document.getElementById('perguntas');
+
+        perguntas.forEach((p, index) => {
+          const div = document.createElement('div');
+          div.className = 'pergunta';
+          div.innerHTML = `
+              <label class="block font-medium text-orange-500">${index + 1}. ${p.titulo}</label>
+              <small class="block mb-1 text-gray-500">${p.subtitulo || ''}</small>
+              ${gerarInput(p)}
+            `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        Swal.fire('Erro', 'Erro ao carregar perguntas ou verificar envio.', 'error');
+      }
+    }
+
+    function gerarInput(p) {
+      const name = `resposta_${p.id}`;
+      const required = p.obrigatoria === '1' ? 'required' : '';
+
+      if (p.metodo_resposta === 'nota') {
+        const idPrefix = `estrela_${p.id}`;
+        const hiddenInput = `<input type="hidden" name="${name}" id="${idPrefix}_valor" ${required} />`;
+        let stars = '';
+        for (let i = 1; i <= 10; i++) {
+          stars += `
+              <div class="estrela" data-pergunta="${p.id}" data-value="${i}">
+                &#9733;
+                <span class="numero">${i}</span>
+              </div>
+            `;
+        }
+
+        setTimeout(() => {
+          document.querySelectorAll('[data-pergunta="' + p.id + '"]').forEach(estrela => {
+            estrela.addEventListener('click', () => {
+              const valor = estrela.dataset.value;
+              document.getElementById(`${idPrefix}_valor`).value = valor;
+
+              document.querySelectorAll('[data-pergunta="' + p.id + '"]').forEach(e => {
+                e.classList.remove('ativa');
+              });
+
+              document.querySelectorAll('[data-pergunta="' + p.id + '"]').forEach(e => {
+                if (parseInt(e.dataset.value) <= valor) {
+                  e.classList.add('ativa');
+                }
+              });
+            });
+          });
+        }, 10);
+
+        return hiddenInput + `<div class="flex justify-center gap-1 items-center estrela-wrapper">${stars}</div>`;
+      }
+
+      if (p.metodo_resposta === 'sim_nao') {
+        return `
+            <div class="flex gap-4">
+              <label class="inline-flex items-center">
+                <input type="radio" name="${name}" value="sim" ${required} class="text-orange-500 focus:ring-orange-500" />
+                <span class="ml-2">Sim</span>
+              </label>
+              <label class="inline-flex items-center">
+                <input type="radio" name="${name}" value="nao" ${required} class="text-orange-500 focus:ring-orange-500" />
+                <span class="ml-2">Não</span>
+              </label>
+            </div>
+          `;
+      }
+
+      if (p.metodo_resposta === 'upload') {
+        return `<input type="file" name="${name}" accept="image/*,video/*" ${required} class="w-full">`;
+      }
+
+      if (p.metodo_resposta === 'comentario') {
+        return `
+            <textarea name="${name}" maxlength="1200"
+              class="w-full border border-gray-300 rounded px-3 py-2"
+              placeholder="Digite seu comentário aqui..." ${required}></textarea>
+            <small class="text-gray-500">Máximo de 1200 caracteres</small>
+          `;
+      }
+
+      return `<input type="text" name="${name}" ${required} class="w-full border border-gray-300 rounded px-3 py-2">`;
+    }
+
+    async function uploadArquivo(arquivo, perguntaId) {
+      const form = new FormData();
+      const sufixo = Math.floor(Math.random() * 90 + 10);
+      const nomeArquivo = `${chavePedido}-${perguntaId}-${sufixo}`;
+      form.append('file', arquivo);
+      form.append('nome', nomeArquivo);
+
+      const response = await axios.post('https://vemprodeck.com.br/upload.php', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      return response.data.url;
+    }
+
+    document.getElementById('npsForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const respostas = [];
+
+      for (let [key, value] of formData.entries()) {
+        const match = key.match(/^resposta_(\d+)$/);
+        if (match) {
+          const perguntaId = parseInt(match[1]);
+
+          if (value instanceof File && value.size > 0) {
+            if (value.size > 25 * 1024 * 1024) {
+              Swal.fire('Erro', 'Arquivos devem ter no máximo 25MB.', 'error');
+              return;
+            }
+            const url = await uploadArquivo(value, perguntaId);
+            respostas.push({ pergunta_id: perguntaId, resposta: url });
+          } else {
+            respostas.push({
+              pergunta_id: perguntaId,
+              resposta: value === '' ? null : value
+            });
+          }
+        }
+      }
+
+      const latitude = document.getElementById('latitude').value;
+      const longitude = document.getElementById('longitude').value;
+
+      try {
+        const response = await axios.post(baseUrl, {
+          method: 'CreateRespostas',
+          data: {
+            chave_pedido: chavePedido,
+            respostas,
+            latitude,
+            longitude
+          }
+        });
+
+        if (response.data.success) {
+          Swal.fire('Obrigado!', 'Suas respostas foram registradas com sucesso.', 'success')
+                  .then(() => window.location.reload());
+        } else {
+          Swal.fire('Erro', response.data.error || 'Erro ao enviar.', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Erro', 'Erro ao enviar respostas.', 'error');
+      }
+    });
+
+    carregarFormulario();
+  });
+</script>
+</body>
+</html>
