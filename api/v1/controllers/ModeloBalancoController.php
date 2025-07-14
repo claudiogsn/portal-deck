@@ -891,13 +891,11 @@ class ModeloBalancoController
         global $pdo;
 
         try {
-            // Validação das datas
             if (!empty($data_inicial) && !empty($data_final) && $data_inicial > $data_final) {
                 http_response_code(400);
                 return ['success' => false, 'message' => 'A data inicial não pode ser maior que a data final.'];
             }
 
-            // Base da query com JOIN no status
             $query = "
         SELECT
             rc.id,
@@ -909,12 +907,16 @@ class ModeloBalancoController
             rc.usuario_id,
             rc.created_at,
             rc.updated_at,
-            rc.solicitante_nome
+            rc.solicitante_nome,
+            (
+                SELECT SUM(COALESCE(ri.preco, 0) * ri.quantidade)
+                FROM requisicao_compras_itens ri
+                WHERE ri.requisicao_id = rc.id
+            ) AS valor_total
         FROM requisicao_compras rc
         INNER JOIN requisicao_status rs ON rs.id = rc.status
         WHERE rc.system_unit_id = :system_unit_id";
 
-            // Filtros de data
             if (!empty($data_inicial) && !empty($data_final)) {
                 $query .= " AND rc.data BETWEEN :data_inicial AND :data_final";
             } elseif (!empty($data_inicial)) {
@@ -944,6 +946,10 @@ class ModeloBalancoController
                     $created->modify('-5 hours');
                     $req['created_at'] = $created->format('Y-m-d H:i:s');
                 }
+
+                $valor = (float) ($req['valor_total'] ?? 0);
+                $req['valor_total'] = 'R$ ' . number_format($valor, 2, ',', '.');
+
             }
 
             return ['success' => true, 'requisicoes' => $requisicoes];
@@ -952,6 +958,7 @@ class ModeloBalancoController
             return ['success' => false, 'message' => 'Erro ao listar requisições: ' . $e->getMessage()];
         }
     }
+
 
     public static function getPurchaseRequestByDoc($system_unit_id, $doc)
     {

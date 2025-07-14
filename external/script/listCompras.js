@@ -95,12 +95,13 @@ $(document).ready(function () {
                     Realizar entrega
                     </a>
                 </li>`;
-    
+
             const row = $(`
                 <tr>
                     <td><input type="checkbox" id="balanco-${requisicao.doc}" class="chk-col-blue balanco-checkbox" data-doc="${requisicao.doc}"><label for="balanco-${requisicao.doc}"> </label></td>
                     <td>${requisicao.doc}</td>
                     <td>${requisicao.status_descricao}</td>
+                    <td>${requisicao.valor_total}</td>
                     <td>${new Date(requisicao.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td>
                         <div class="btn-group">
@@ -116,7 +117,8 @@ $(document).ready(function () {
                     </td>
                 </tr>
             `);
-    
+
+
             row.find('.btnEntrega').on('click', function () {
                 abrirModalEntrega(requisicao.doc);
             });
