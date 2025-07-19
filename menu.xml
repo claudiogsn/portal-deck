@@ -20,6 +20,10 @@
         <action>DashboardNPS</action>
         <icon>fas:chart-bar fa-fw</icon>
       </menuitem>
+      <menuitem label="Listar Mesas">
+        <action>ListMesas</action>
+        <icon>fas:archive fa-fw</icon>
+      </menuitem>
       <menuitem label="Configurar Formulario">
         <action>ConfigurarFomulario</action>
         <icon>fas:cogs fa-fw</icon>

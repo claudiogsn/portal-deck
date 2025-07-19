@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Mesas Identificadas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="bsb/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
+    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="bsb/plugins/node-waves/waves.css" rel="stylesheet">
+    <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet">
+    <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
+    <link href="bsb/css/style.css" rel="stylesheet">
+    <link href="bsb/css/themes/all-themes.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/313adf4cdc.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+</head>
+<style>
+
+</style>
+
+<body class="theme-blue">
+<div class="container-fluid">
+    <div class="block-header">
+        <br>
+    </div>
+
+    <div class="row clearfix">
+        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+            <div class="card">
+                <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <h2 style="margin: 0;">Mesas Identificadas</h2>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <strong><span id="contadorSelecionados">0</span> selecionado(s)</strong>
+                        <button class="btn bg-green btn-xs waves-effect" style="padding: 6px 16px;" onclick="exportarSelecionados()">
+                            <i class="fas fa-file-excel"></i> Exportar para Excel
+                        </button>
+
+                        <button class="btn bg-blue btn-xs waves-effect" style="padding: 6px 16px;" onclick="abrirModalNovaMesa()">
+                            <i class="fas fa-plus"></i> Nova Mesa
+                        </button>
+                    </div>
+                </div>
+
+                <div class="body table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th style="width: 28px; padding: 0;" class="text-center">
+                                <input type="checkbox" id="selectAll" class="chk-col-blue" onclick="toggleTodosCheckboxes()" />
+                                <label for="selectAll"> </label>
+                            </th>
+                            <th style="width: 28px; padding: 0;" class="text-center"></th>
+                            <th>Número</th>
+                            <th>Identificador</th>
+                            <th>Link</th>
+                            <th>Data de Criação</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tabelaMesas"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Mesa -->
+<div class="modal fade" id="modalMesa" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form class="modal-content" id="formMesa">
+            <div class="modal-header">
+                <h4 class="modal-title">Cadastrar Nova Mesa</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mesaId">
+                <label for="numero_mesa">Número da Mesa</label>
+                <div class="form-group">
+                    <div class="form-line">
+                        <input type="number" id="numero_mesa" name="numero_mesa" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn bg-grey" data-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn bg-green">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="bsb/plugins/jquery/jquery.min.js"></script>
+<script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+<script src="bsb/plugins/node-waves/waves.js"></script>
+<script src="bsb/plugins/jquery-datatable/jquery.dataTables.js"></script>
+<script src="bsb/plugins/jquery-datatable/skin/bootstrap/js/dataTables.bootstrap.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    const system_unit_id = new URLSearchParams(window.location.search).get("system_unit_id");
+    const token = new URLSearchParams(window.location.search).get("token");
+    const unidade = new URLSearchParams(window.location.search).get("unidade");
+
+
+    const baseUrl = window.location.hostname !== 'localhost' ?
+        'https://portal.vemprodeck.com.br/api/v1/index.php' :
+        'http://localhost/portal-deck/api/v1/index.php';
+
+    const baseUrlredirect = window.location.hostname !== 'localhost' ?
+        'https://vemprodeck.com.br/avaliacao/' :
+        'http://localhost/portal-deck/external/nps_mesa.html?chave=';
+
+
+
+    function carregarMesas() {
+        Swal.showLoading();
+        axios.post(baseUrl, {
+            method: "listarMesasPorUnidade",
+            token,
+            data: { system_unit_id }
+        }).then(res => {
+            const tbody = $("#tabelaMesas");
+            tbody.empty();
+            res.data.mesas.forEach(m => {
+                tbody.append(`
+                  <tr>
+                    <td class="text-center">
+                      <input type="checkbox" id="mesa-${m.id}" class="chk-col-blue mesa-checkbox" data-url="${baseUrlredirect}${m.identificador}" data-nome="NPS ${unidade} Mesa ${m.numero_mesa}" onchange="atualizarContador()">
+                      <label for="mesa-${m.id}"> </label>
+                    </td>
+                    <td class="text-center">
+                      <a href="#" onclick='editarMesa(${JSON.stringify(m)})' title="Editar"><i class="fas fa-edit orange"></i></a>
+                    </td>
+                    <td>${m.numero_mesa}</td>
+                    <td>${m.identificador}</td>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <a style="color: dimgrey" href="${baseUrlredirect}${m.identificador}" target="_blank" title="Avaliar Mesa">${baseUrlredirect}${m.identificador}</a>
+                        <a href="#" onclick="copiarLink('${baseUrlredirect}${m.identificador}')" title="Copiar Link">
+                          <i class="fas fa-copy green" style="cursor:pointer;"></i>
+                        </a>
+                      </div>
+                    </td>
+                    <td>${new Date(m.created_at).toLocaleString('pt-BR')}</td>
+                  </tr>
+                `);
+
+            });
+            Swal.close();
+        }).catch(() => {
+            Swal.fire("Erro", "Não foi possível carregar mesas", "error");
+        });
+    }
+
+    function copiarLink(link) {
+        navigator.clipboard.writeText(link)
+            .then(() => Swal.fire("Copiado!", "Link da mesa copiado para a área de transferência.", "success"))
+            .catch(() => Swal.fire("Erro", "Não foi possível copiar o link.", "error"));
+    }
+
+    function abrirModalNovaMesa() {
+        $("#mesaId").val("");
+        $("#numero_mesa").val("");
+        $(".modal-title").text("Cadastrar Nova Mesa");
+        $("#modalMesa").modal("show");
+    }
+
+    function editarMesa(mesa) {
+        $("#mesaId").val(mesa.id);
+        $("#numero_mesa").val(mesa.numero_mesa);
+        $(".modal-title").text("Editar Mesa (Somente Visualização)");
+        $("#modalMesa").modal("show");
+    }
+
+    function atualizarContador() {
+        const selecionados = document.querySelectorAll('.mesa-checkbox:checked');
+        document.getElementById('contadorSelecionados').textContent = selecionados.length;
+    }
+
+    function toggleTodosCheckboxes() {
+        const check = document.getElementById('selectAll').checked;
+        document.querySelectorAll('.mesa-checkbox').forEach(el => el.checked = check);
+        atualizarContador();
+    }
+
+    function exportarSelecionados() {
+        const selecionados = Array.from(document.querySelectorAll('.mesa-checkbox:checked'));
+
+        if (selecionados.length === 0) {
+            return Swal.fire("Atenção", "Nenhuma mesa selecionada para exportação.", "warning");
+        }
+
+        const data = [['URL', 'QR Code Title (for reference)']];
+        selecionados.forEach(el => {
+            const url = el.getAttribute('data-url');
+            const nome = el.getAttribute('data-nome');
+            data.push([url, nome]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Mesas");
+
+        XLSX.writeFile(workbook, `Mesas_${unidade.replace(/\s+/g, '_')}.xlsx`);
+    }
+
+
+
+    $("#formMesa").on("submit", function (e) {
+        e.preventDefault();
+
+        const numero = parseInt($("#numero_mesa").val());
+        const id = $("#mesaId").val();
+
+        if (id) {
+            Swal.fire("Aviso", "Edição de mesa não permitida neste módulo. Use outro canal para alterar.", "info");
+            return;
+        }
+
+        Swal.fire({ title: "Salvando...", didOpen: () => Swal.showLoading() });
+
+        axios.post(baseUrl, {
+            method: "criarMesa",
+            token,
+            data: {
+                numero_mesa: numero,
+                system_unit_id: parseInt(system_unit_id)
+            }
+        }).then(res => {
+            if (res.data.success) {
+                Swal.fire("Sucesso", "Mesa cadastrada com sucesso!", "success");
+                $("#modalMesa").modal("hide");
+                carregarMesas();
+            } else {
+                Swal.fire("Erro", res.data.message || "Erro ao cadastrar mesa", "error");
+            }
+        }).catch(() => {
+            Swal.fire("Erro", "Falha na requisição", "error");
+        });
+    });
+
+    $(document).ready(() => {
+        if (!system_unit_id) {
+            Swal.fire("Erro", "system_unit_id não informado na URL", "error");
+            return;
+        }
+        carregarMesas();
+    });
+</script>
+</body>
+</html>

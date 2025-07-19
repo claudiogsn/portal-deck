@@ -1000,7 +1000,7 @@ if (isset($data['method']) && isset($data['data'])) {
                 break;
 
                 // Métodos para MesaController
-            case 'CreateMesa':
+            case 'criarMesa':
                 if (isset($requestData['numero_mesa'], $requestData['system_unit_id'])) {
                     $response = MesaController::criarMesa($requestData['numero_mesa'], $requestData['system_unit_id']);
                 } else {
@@ -1009,7 +1009,7 @@ if (isset($data['method']) && isset($data['data'])) {
                 }
                 break;
 
-            case 'ListMesasByUnit':
+            case 'listarMesasPorUnidade':
                 if (isset($requestData['system_unit_id'])) {
                     $response = MesaController::listarMesasPorUnidade($requestData['system_unit_id']);
                 } else {

@@ -5,30 +5,28 @@
   <title>Gestão de Perguntas NPS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="bsb/favicon.ico" type="image/x-icon">
-  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&subset=latin,cyrillic-ext" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&subset=latin,cyrillic-ext" rel="stylesheet">
   <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
   <link href="bsb/plugins/node-waves/waves.css" rel="stylesheet">
   <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet">
   <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
   <link href="bsb/css/style.css" rel="stylesheet">
-  <link href="bsb/css/themes/all-themes.css" rel="stylesheet" />
+  <link href="bsb/css/themes/all-themes.css" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/313adf4cdc.js" crossorigin="anonymous"></script>
+
 </head>
 
 <body class="theme-blue">
-
 <div class="container-fluid">
   <div class="block-header">
-    <br></br>
+    <br>
   </div>
 
-  <!-- Card Perguntas -->
   <div class="row clearfix">
     <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
       <div class="card">
         <div class="header">
-          <h2>
-            Perguntas Cadastradas
-          </h2>
+          <h2>Perguntas Cadastradas</h2>
           <ul class="header-dropdown m-r--5">
             <li>
               <button class="btn bg-blue btn-xs waves-effect" onclick="abrirModalNova()">
@@ -38,15 +36,20 @@
           </ul>
         </div>
         <div class="body table-responsive">
-          <table class="table table-bordered table-hover js-basic-example dataTable">
+          <table class="table table-striped table-hover js-basic-example dataTable">
             <thead>
-              <tr>
-                <th>Título</th>
-                <th>Subtítulo</th>
-                <th>Tipo</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
+            <tr>
+              <th style="width: 28px; padding: 0;" class="text-center"></th> <!-- Editar -->
+              <th style="width: 28px; padding: 0;" class="text-center"></th> <!-- Desativar -->
+              <th>Título</th>
+              <th>Subtítulo Delivery</th>
+              <th>Subtítulo Mesa</th>
+              <th>Tipo</th>
+              <th>Obrigatória</th>
+              <th>Delivery</th>
+              <th>Mesa</th>
+              <th>Status</th>
+            </tr>
             </thead>
             <tbody id="tabelaPerguntas"></tbody>
           </table>
@@ -65,6 +68,7 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="perguntaId">
+
         <label for="titulo">Título</label>
         <div class="form-group">
           <div class="form-line">
@@ -72,10 +76,17 @@
           </div>
         </div>
 
-        <label for="subtitulo">Subtítulo</label>
+        <label for="subtitulo_delivery">Subtítulo (Delivery)</label>
         <div class="form-group">
           <div class="form-line">
-            <input type="text" id="subtitulo" class="form-control" required>
+            <input type="text" id="subtitulo_delivery" class="form-control">
+          </div>
+        </div>
+
+        <label for="subtitulo_mesa">Subtítulo (Mesa)</label>
+        <div class="form-group">
+          <div class="form-line">
+            <input type="text" id="subtitulo_mesa" class="form-control">
           </div>
         </div>
 
@@ -90,7 +101,21 @@
             </select>
           </div>
         </div>
+
+        <div class="form-group">
+          <input type="checkbox" id="obrigatoria">
+          <label for="obrigatoria">Obrigatória</label>
+        </div>
+        <div class="form-group">
+          <input type="checkbox" id="delivery">
+          <label for="delivery">Delivery</label>
+        </div>
+        <div class="form-group">
+          <input type="checkbox" id="mesa">
+          <label for="mesa">Mesa</label>
+        </div>
       </div>
+
       <div class="modal-footer">
         <button type="button" class="btn bg-grey waves-effect" data-dismiss="modal">CANCELAR</button>
         <button type="submit" class="btn bg-green waves-effect">SALVAR</button>
@@ -111,8 +136,8 @@
 
 <script>
   const baseUrl = window.location.hostname !== 'localhost'
-    ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
-    : 'http://localhost/dispatch-bot-api/index.php';
+          ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
+          : 'http://localhost/dispatch-bot-api/index.php';
 
   function carregarPerguntas() {
     Swal.showLoading();
@@ -124,17 +149,27 @@
       tbody.empty();
       res.data.forEach(p => {
         tbody.append(`
-          <tr>
-            <td>${p.titulo}</td>
-            <td>${p.subtitulo}</td>
-            <td>${p.metodo_resposta}</td>
-            <td><span class="label ${p.ativo ? 'label-success' : 'label-default'}">${p.ativo ? 'Ativa' : 'Inativa'}</span></td>
-            <td>
-              <button class="btn bg-orange btn-xs waves-effect" onclick='editar(${JSON.stringify(p)})'>Editar</button>
-              ${p.ativo ? `<button class="btn bg-red btn-xs waves-effect" onclick="desativar(${p.id})">Desativar</button>` : ''}
-            </td>
-          </tr>
-        `);
+        <tr>
+          <td class="text-center">
+            <a href="#" onclick='editar(${JSON.stringify(p)})' title="Editar">
+              <i class="fas fa-edit orange"></i>
+            </a>
+          </td>
+          <td class="text-center">
+          <a href="#" onclick="toggleAtivo(${p.id}, ${p.ativo})" title="${p.ativo ? 'Desativar' : 'Ativar'}">
+            <i class="fa fa-power-off ${p.ativo ? 'red' : 'green'}"></i>
+          </a>
+        </td>
+          <td>${p.titulo}</td>
+          <td>${p.subtitulo_delivery || '-'}</td>
+          <td>${p.subtitulo_mesa || '-'}</td>
+          <td>${p.metodo_resposta}</td>
+          <td>${p.obrigatoria ? 'Sim' : 'Não'}</td>
+          <td>${p.delivery ? 'Sim' : 'Não'}</td>
+          <td>${p.mesa ? 'Sim' : 'Não'}</td>
+          <td><span class="label ${p.ativo ? 'label-success' : 'label-default'}">${p.ativo ? 'Ativa' : 'Inativa'}</span></td>
+        </tr>
+      `);
       });
       Swal.close();
     }).catch(() => {
@@ -146,6 +181,7 @@
     $("#tituloModal").text("Nova Pergunta");
     $("#formPergunta")[0].reset();
     $("#perguntaId").val('');
+    $("#obrigatoria, #delivery, #mesa").prop("checked", false);
     $("#modalPergunta").modal('show');
   }
 
@@ -153,8 +189,12 @@
     $("#tituloModal").text("Editar Pergunta");
     $("#perguntaId").val(p.id);
     $("#titulo").val(p.titulo);
-    $("#subtitulo").val(p.subtitulo);
+    $("#subtitulo_delivery").val(p.subtitulo_delivery);
+    $("#subtitulo_mesa").val(p.subtitulo_mesa);
     $("#tipo").val(p.metodo_resposta);
+    $("#obrigatoria").prop("checked", !!p.obrigatoria);
+    $("#delivery").prop("checked", !!p.delivery);
+    $("#mesa").prop("checked", !!p.mesa);
     $("#modalPergunta").modal('show');
   }
 
@@ -164,8 +204,12 @@
     const payload = {
       formulario: "nps_delivery_deck",
       titulo: $("#titulo").val(),
-      subtitulo: $("#subtitulo").val(),
+      subtitulo_delivery: $("#subtitulo_delivery").val(),
+      subtitulo_mesa: $("#subtitulo_mesa").val(),
       metodo_resposta: $("#tipo").val(),
+      obrigatoria: $("#obrigatoria").is(":checked") ? 1 : 0,
+      delivery: $("#delivery").is(":checked") ? 1 : 0,
+      mesa: $("#mesa").is(":checked") ? 1 : 0,
       ativo: 1
     };
     if (id) payload.id = id;
@@ -185,28 +229,32 @@
     });
   });
 
-  function desativar(id) {
+  function toggleAtivo(id, ativoAtual) {
+    const novoStatus = ativoAtual ? 0 : 1;
+    const texto = ativoAtual ? 'desativar' : 'ativar';
+
     Swal.fire({
-      title: 'Tem certeza que deseja desativar?',
+      title: `Tem certeza que deseja ${texto}?`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Sim, desativar',
+      confirmButtonText: `Sim, ${texto}`,
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire({ title: 'Desativando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        Swal.fire({ title: `${texto.charAt(0).toUpperCase() + texto.slice(1)}...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         axios.post(baseUrl, {
           method: "UpdateQuestion",
-          data: { perguntas: [{ id, ativo: 0 }] }
+          data: { perguntas: [{ id, ativo: novoStatus }] }
         }).then(() => {
-          Swal.fire("Feito", "Pergunta desativada", "success");
+          Swal.fire("Feito", `Pergunta ${texto} com sucesso.`, "success");
           carregarPerguntas();
         }).catch(() => {
-          Swal.fire("Erro", "Erro ao desativar", "error");
+          Swal.fire("Erro", `Erro ao ${texto}.`, "error");
         });
       }
     });
   }
+
 
   $(document).ready(() => carregarPerguntas());
 </script>
