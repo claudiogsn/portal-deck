@@ -34,7 +34,17 @@ class MesaController
     {
         global $pdo;
 
-        // Verifica se já existe a mesa para essa unidade
+        // Verifica limite atual de mesas
+        $stmtContar = $pdo->prepare("SELECT COUNT(*) AS total FROM mesas_identificadas WHERE system_unit_id = :unidade");
+        $stmtContar->bindParam(':unidade', $system_unit_id, PDO::PARAM_INT);
+        $stmtContar->execute();
+        $totalAtual = (int)$stmtContar->fetch(PDO::FETCH_ASSOC)['total'];
+
+        if ($totalAtual >= 200) {
+            return ['success' => false, 'message' => 'Limite máximo de 200 mesas atingido para esta unidade.'];
+        }
+
+        // Verifica se já existe a mesa
         $stmt = $pdo->prepare("SELECT id FROM mesas_identificadas WHERE numero_mesa = :numero AND system_unit_id = :unidade");
         $stmt->bindParam(':numero', $numero_mesa, PDO::PARAM_INT);
         $stmt->bindParam(':unidade', $system_unit_id, PDO::PARAM_INT);
@@ -44,8 +54,8 @@ class MesaController
             return ['success' => false, 'message' => 'Mesa já cadastrada para esta unidade.'];
         }
 
+        // Insere a nova mesa
         $identificador = self::gerarIdentificadorUnico();
-
         $stmtInsert = $pdo->prepare("INSERT INTO mesas_identificadas (numero_mesa, identificador, system_unit_id) VALUES (:numero, :identificador, :unidade)");
         $stmtInsert->bindParam(':numero', $numero_mesa, PDO::PARAM_INT);
         $stmtInsert->bindParam(':identificador', $identificador, PDO::PARAM_STR);
@@ -62,6 +72,69 @@ class MesaController
             ]
         ];
     }
+
+
+    public static function criarMesasPorRange($inicio, $fim, $system_unit_id)
+    {
+        global $pdo;
+
+        // Validações iniciais
+        if ($inicio > $fim) {
+            return ['success' => false, 'message' => 'O número inicial deve ser menor ou igual ao número final.'];
+        }
+
+        // Total atual
+        $stmtTotal = $pdo->prepare("SELECT COUNT(*) AS total FROM mesas_identificadas WHERE system_unit_id = :unidade");
+        $stmtTotal->bindParam(':unidade', $system_unit_id, PDO::PARAM_INT);
+        $stmtTotal->execute();
+        $totalAtual = (int)$stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
+
+        $quantidadeRange = $fim - $inicio + 1;
+        $espacoDisponivel = 200 - $totalAtual;
+
+        if ($espacoDisponivel <= 0) {
+            return ['success' => false, 'message' => 'Limite máximo de 200 mesas já atingido para esta unidade.'];
+        }
+
+        if ($quantidadeRange > $espacoDisponivel) {
+            return ['success' => false, 'message' => "Você pode cadastrar no máximo $espacoDisponivel mesa(s)."];
+        }
+
+        // Busca mesas já existentes no range
+        $stmtExistentes = $pdo->prepare("
+        SELECT numero_mesa FROM mesas_identificadas 
+        WHERE system_unit_id = :unidade AND numero_mesa BETWEEN :inicio AND :fim
+    ");
+        $stmtExistentes->execute([
+            ':unidade' => $system_unit_id,
+            ':inicio' => $inicio,
+            ':fim' => $fim
+        ]);
+        $existentes = array_column($stmtExistentes->fetchAll(PDO::FETCH_ASSOC), 'numero_mesa');
+
+        $inseridas = [];
+        for ($i = $inicio; $i <= $fim; $i++) {
+            if (in_array($i, $existentes)) continue;
+
+            $identificador = self::gerarIdentificadorUnico();
+            $stmtInsert = $pdo->prepare("INSERT INTO mesas_identificadas (numero_mesa, identificador, system_unit_id) VALUES (:numero, :identificador, :unidade)");
+            $stmtInsert->execute([
+                ':numero' => $i,
+                ':identificador' => $identificador,
+                ':unidade' => $system_unit_id
+            ]);
+            $inseridas[] = $i;
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Mesas cadastradas com sucesso.',
+            'inseridas' => $inseridas,
+            'ignoradas' => $existentes
+        ];
+    }
+
+
 
     // Lista mesas por unidade
     public static function listarMesasPorUnidade($system_unit_id)

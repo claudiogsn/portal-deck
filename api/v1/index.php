@@ -1008,6 +1008,14 @@ if (isset($data['method']) && isset($data['data'])) {
                     throw new Exception("Missing required fields: numero_mesa and/or system_unit_id.");
                 }
                 break;
+            case 'criarMesasPorRange':
+                if (isset($requestData['inicio'],$requestData['fim'], $requestData['system_unit_id'])) {
+                    $response = MesaController::criarMesasPorRange($requestData['inicio'],$requestData['fim'], $requestData['system_unit_id']);
+                } else {
+                    http_response_code(400);
+                    throw new Exception("Missing required fields: inicio, fim and/or system_unit_id.");
+                }
+                break;
 
             case 'listarMesasPorUnidade':
                 if (isset($requestData['system_unit_id'])) {

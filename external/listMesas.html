@@ -11,12 +11,18 @@
     <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet">
     <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
     <link href="bsb/css/style.css" rel="stylesheet">
+    <link href="bsb/css/materialize.css" rel="stylesheet">
     <link href="bsb/css/themes/all-themes.css" rel="stylesheet">
     <script src="https://kit.fontawesome.com/313adf4cdc.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- noUISlider Css -->
+    <link href="bsb/nuslider/nouislider.css" rel="stylesheet" />
+    <script src="bsb/nuslider/nouislider.js"></script>
 
 </head>
 <style>
+
+
 
 </style>
 
@@ -70,18 +76,42 @@
 <div class="modal fade" id="modalMesa" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <form class="modal-content" id="formMesa">
-            <div class="modal-header">
-                <h4 class="modal-title">Cadastrar Nova Mesa</h4>
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h4 class="modal-title" style="margin: 0;">Cadastrar Nova Mesa</h4>
+                <div  style="margin: 0; margin-left: auto;">
+                    <input type="checkbox" id="modoRange" class="chk-col-blue filled-in" onchange="alternarModoRange()" />
+                    <label for="modoRange" style="margin-bottom: 0; font-size: 13px; cursor: pointer;">Criar por intervalo</label>
+                </div>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="mesaId">
-                <label for="numero_mesa">Número da Mesa</label>
-                <div class="form-group">
-                    <div class="form-line">
-                        <input type="number" id="numero_mesa" name="numero_mesa" class="form-control" required>
+
+                <!-- Cadastro único -->
+                <div id="formUnico">
+                    <label for="numero_mesa">Número da Mesa</label>
+                    <div >
+                        <div class="form-line">
+                            <input type="number" id="numero_mesa" name="numero_mesa" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cadastro por range -->
+                <div id="formRange" style="display: none;">
+                    <div >
+                        <div class="form-group">
+                            <label style="font-size: 13px;">Intervalo de Mesas</label>
+                            <div id="rangeSlider" style="margin-bottom: 10px;"></div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="range_inicio" class="form-control" placeholder="Início" style="max-width: 100px;">
+                            <input type="number" id="range_fim" class="form-control" placeholder="Fim" style="max-width: 100px;">
+                        </div>
                     </div>
                 </div>
             </div>
+
             <div class="modal-footer">
                 <button type="button" class="btn bg-grey" data-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn bg-green">Salvar</button>
@@ -89,6 +119,7 @@
         </form>
     </div>
 </div>
+
 
 <!-- Scripts -->
 <script src="bsb/plugins/jquery/jquery.min.js"></script>
@@ -155,6 +186,82 @@
         });
     }
 
+
+    const rangeSlider = document.getElementById('rangeSlider');
+
+    noUiSlider.create(rangeSlider, {
+        start: [1, 10],
+        connect: true,
+        step: 1,
+        range: {
+            'min': 0,
+            'max': 200
+        },
+        format: {
+            to: value => Math.round(value),
+            from: value => parseInt(value)
+        }
+    });
+
+    // Slider → Inputs
+    rangeSlider.noUiSlider.on('update', function (values) {
+        $('#range_inicio').val(values[0]);
+        $('#range_fim').val(values[1]);
+    });
+
+    // Inputs → Slider
+    $('#range_inicio').on('change', function () {
+        rangeSlider.noUiSlider.set([this.value, null]);
+    });
+    $('#range_fim').on('change', function () {
+        rangeSlider.noUiSlider.set([null, this.value]);
+    });
+
+
+
+    function alternarModoRange() {
+        const modoRange = document.getElementById("modoRange").checked;
+        document.getElementById("formUnico").style.display = modoRange ? "none" : "block";
+        document.getElementById("formRange").style.display = modoRange ? "block" : "none";
+
+        if (modoRange && !window.sliderRange) {
+            // Aguarda o DOM renderizar a div com id="sliderRange"
+            setTimeout(() => {
+                const slider = document.getElementById('sliderRange');
+                const inputInicio = document.getElementById('range_inicio');
+                const inputFim = document.getElementById('range_fim');
+
+                if (!slider || !inputInicio || !inputFim) return;
+
+                window.sliderRange = noUiSlider.create(slider, {
+                    start: [1, 5],
+                    connect: true,
+                    step: 1,
+                    range: { min: 0, max: 200 },
+                    format: {
+                        to: value => Math.round(value),
+                        from: value => Math.round(value)
+                    }
+                });
+
+                slider.noUiSlider.on('update', (values) => {
+                    inputInicio.value = values[0];
+                    inputFim.value = values[1];
+                });
+
+                inputInicio.addEventListener('change', () => {
+                    slider.noUiSlider.set([inputInicio.value, null]);
+                });
+
+                inputFim.addEventListener('change', () => {
+                    slider.noUiSlider.set([null, inputFim.value]);
+                });
+            }, 10); // Pequeno atraso para garantir que os elementos existam
+        }
+    }
+
+
+
     function copiarLink(link) {
         navigator.clipboard.writeText(link)
             .then(() => Swal.fire("Copiado!", "Link da mesa copiado para a área de transferência.", "success"))
@@ -212,7 +319,7 @@
     $("#formMesa").on("submit", function (e) {
         e.preventDefault();
 
-        const numero = parseInt($("#numero_mesa").val());
+        const modoRange = document.getElementById("modoRange").checked;
         const id = $("#mesaId").val();
 
         if (id) {
@@ -220,27 +327,57 @@
             return;
         }
 
-        Swal.fire({ title: "Salvando...", didOpen: () => Swal.showLoading() });
-
-        axios.post(baseUrl, {
-            method: "criarMesa",
+        const payload = {
             token,
-            data: {
+            method: modoRange ? "criarMesasPorRange" : "criarMesa",
+            data: {}
+        };
+
+        if (modoRange) {
+            const inicio = parseInt(document.getElementById("range_inicio").value);
+            const fim = parseInt(document.getElementById("range_fim").value);
+
+            if (isNaN(inicio) || isNaN(fim) || inicio < 0 || fim < 0 || inicio > fim) {
+                Swal.fire("Erro", "Intervalo inválido. Verifique os valores de início e fim.", "error");
+                return;
+            }
+
+            payload.data = {
+                inicio,
+                fim,
+                system_unit_id: parseInt(system_unit_id)
+            };
+        } else {
+            const numero = parseInt($("#numero_mesa").val());
+            if (isNaN(numero) || numero < 0) {
+                Swal.fire("Erro", "Número de mesa inválido.", "error");
+                return;
+            }
+
+            payload.data = {
                 numero_mesa: numero,
                 system_unit_id: parseInt(system_unit_id)
-            }
-        }).then(res => {
-            if (res.data.success) {
-                Swal.fire("Sucesso", "Mesa cadastrada com sucesso!", "success");
-                $("#modalMesa").modal("hide");
-                carregarMesas();
-            } else {
-                Swal.fire("Erro", res.data.message || "Erro ao cadastrar mesa", "error");
-            }
-        }).catch(() => {
-            Swal.fire("Erro", "Falha na requisição", "error");
-        });
+            };
+        }
+
+        Swal.fire({ title: "Salvando...", didOpen: () => Swal.showLoading() });
+
+        axios.post(baseUrl, payload)
+            .then(res => {
+                if (res.data.success) {
+                    Swal.fire("Sucesso", "Mesa(s) cadastrada(s) com sucesso!", "success");
+                    $("#modalMesa").modal("hide");
+                    carregarMesas();
+                } else {
+                    Swal.fire("Erro", res.data.message || "Erro ao cadastrar", "error");
+                }
+            })
+            .catch(() => {
+                Swal.fire("Erro", "Falha na requisição", "error");
+            });
     });
+
+
 
     $(document).ready(() => {
         if (!system_unit_id) {
