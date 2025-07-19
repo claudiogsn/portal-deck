@@ -41,6 +41,7 @@
             <tr>
               <th style="width: 28px; padding: 0;" class="text-center"></th> <!-- Editar -->
               <th style="width: 28px; padding: 0;" class="text-center"></th> <!-- Desativar -->
+              <th style="width: 60px;">Ordem</th>
               <th>Título</th>
               <th>Subtítulo Delivery</th>
               <th>Subtítulo Mesa</th>
@@ -73,6 +74,13 @@
         <div class="form-group">
           <div class="form-line">
             <input type="text" id="titulo" class="form-control" required>
+          </div>
+        </div>
+
+        <label for="ordem">Ordem</label>
+        <div class="form-group">
+          <div class="form-line">
+            <input type="number" id="ordem" class="form-control" required min="1">
           </div>
         </div>
 
@@ -133,6 +141,9 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="bsb/plugins/bootstrap-notify/bootstrap-notify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
 
 <script>
   const baseUrl = window.location.hostname !== 'localhost'
@@ -149,17 +160,18 @@
       tbody.empty();
       res.data.forEach(p => {
         tbody.append(`
-        <tr>
+        <tr data-id="${p.id}">
           <td class="text-center">
             <a href="#" onclick='editar(${JSON.stringify(p)})' title="Editar">
               <i class="fas fa-edit orange"></i>
             </a>
           </td>
           <td class="text-center">
-          <a href="#" onclick="toggleAtivo(${p.id}, ${p.ativo})" title="${p.ativo ? 'Desativar' : 'Ativar'}">
-            <i class="fa fa-power-off ${p.ativo ? 'red' : 'green'}"></i>
-          </a>
-        </td>
+            <a href="#" onclick="toggleAtivo(${p.id}, ${p.ativo})" title="${p.ativo ? 'Desativar' : 'Ativar'}">
+              <i class="fa fa-power-off ${p.ativo ? 'red' : 'green'}"></i>
+            </a>
+          </td>
+          <td class="text-center">${p.ordem || '-'}</td>
           <td>${p.titulo}</td>
           <td>${p.subtitulo_delivery || '-'}</td>
           <td>${p.subtitulo_mesa || '-'}</td>
@@ -170,12 +182,66 @@
           <td><span class="label ${p.ativo ? 'label-success' : 'label-default'}">${p.ativo ? 'Ativa' : 'Inativa'}</span></td>
         </tr>
       `);
+
       });
       Swal.close();
+      ativarSortable();
     }).catch(() => {
       Swal.fire("Erro", "Não foi possível carregar perguntas", "error");
     });
   }
+
+  let ordemOriginal = [];
+
+  function salvarOrdem(perguntas) {
+    return axios.post(baseUrl, {
+      method: "UpdateOrdemPerguntas",
+      data: { perguntas }
+    });
+  }
+
+  function ativarSortable() {
+    $("#tabelaPerguntas").sortable({
+      helper: fixWidthHelper,
+      start: function() {
+        ordemOriginal = $("#tabelaPerguntas tr").map((_, tr) => $(tr).data('id')).get();
+      },
+      update: function() {
+        const novaOrdem = $("#tabelaPerguntas tr").map((index, tr) => ({
+          id: $(tr).data('id'),
+          ordem: index + 1
+        })).get();
+
+        salvarOrdem(novaOrdem).then(() => {
+          $.notify({ message: 'Ordem atualizada com sucesso' }, { type: 'success' });
+          carregarPerguntas(); // Para atualizar campo "ordem" exibido
+        }).catch(() => {
+          Swal.fire("Erro", "Erro ao salvar nova ordem", "error");
+          // Reverter para ordem original
+          const linhas = $("#tabelaPerguntas tr").detach();
+          ordemOriginal.forEach(id => {
+            linhas.filter(`[data-id="${id}"]`).appendTo("#tabelaPerguntas");
+          });
+        });
+      }
+    }).disableSelection();
+  }
+
+  function fixWidthHelper(e, ui) {
+    ui.children().each(function() {
+      $(this).width($(this).width());
+    });
+    return ui;
+  }
+
+
+  function fixWidthHelper(e, ui) {
+    ui.children().each(function() {
+      $(this).width($(this).width());
+    });
+    return ui;
+  }
+
 
   function abrirModalNova() {
     $("#tituloModal").text("Nova Pergunta");
@@ -188,6 +254,7 @@
   function editar(p) {
     $("#tituloModal").text("Editar Pergunta");
     $("#perguntaId").val(p.id);
+    $("#ordem").val(p.ordem || '');
     $("#titulo").val(p.titulo);
     $("#subtitulo_delivery").val(p.subtitulo_delivery);
     $("#subtitulo_mesa").val(p.subtitulo_mesa);
@@ -204,6 +271,7 @@
     const payload = {
       formulario: "nps_delivery_deck",
       titulo: $("#titulo").val(),
+      ordem: parseInt($("#ordem").val()),
       subtitulo_delivery: $("#subtitulo_delivery").val(),
       subtitulo_mesa: $("#subtitulo_mesa").val(),
       metodo_resposta: $("#tipo").val(),
