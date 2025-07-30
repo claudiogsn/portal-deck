@@ -154,7 +154,7 @@
     <icon>fas:home fa-fw</icon>
     <menu>
       <menuitem label="Consultas BI">
-        <action>ListConsultas</action>
+        <action>listConsultas</action>
         <icon>fas:database fa-fw</icon>
       </menuitem>
       <menuitem label="Dashboard">
