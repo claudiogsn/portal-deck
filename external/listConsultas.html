@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Consultas BI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="bsb/favicon.ico" rel="icon" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
+    <link href="bsb/plugins/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="bsb/plugins/node-waves/waves.css" rel="stylesheet">
+    <link href="bsb/plugins/animate-css/animate.css" rel="stylesheet">
+    <link href="bsb/plugins/jquery-datatable/skin/bootstrap/css/dataTables.bootstrap.css" rel="stylesheet">
+    <link href="bsb/css/style.css" rel="stylesheet">
+    <link href="bsb/css/themes/all-themes.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/313adf4cdc.js" crossorigin="anonymous"></script>
+</head>
+<body class="theme-blue">
+<div class="container-fluid">
+    <div class="block-header"><br></div>
+
+    <div class="card">
+        <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0;">Consultas BI</h2>
+            <button class="btn bg-blue btn-xs waves-effect" onclick="abrirModalNovaConsulta()">
+                <i class="fas fa-plus"></i> Nova Consulta
+            </button>
+        </div>
+
+        <div class="body table-responsive">
+            <table class="table table-hover table-striped">
+                <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Data de Criação</th>
+                    <th>Ações</th>
+                </tr>
+                </thead>
+                <tbody id="tabelaConsultas"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Consulta -->
+<div class="modal fade" id="modalConsulta" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <form class="modal-content" id="formConsulta">
+            <div class="modal-header">
+                <h4 class="modal-title">Nova Consulta</h4>
+            </div>
+            <div class="modal-body">
+                <label for="nome">Nome da Consulta</label>
+                <div class="form-group">
+                    <div class="mb-2">
+                        <button class="btn btn-sm btn-default" type="button" onclick="copiarSql()">📋 Copiar</button>
+                        <button class="btn btn-sm btn-default" type="button" onclick="colarSql()">📥 Colar</button>
+                    </div>
+
+                    <br>
+                    <div class="form-line">
+                        <input type="text" id="nome" class="form-control" required>
+                    </div>
+                </div>
+
+                <label for="sql_template">SQL</label>
+                <div class="form-group">
+                    <textarea id="sql_template" class="form-control" style="display: none;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn bg-grey" data-dismiss="modal" type="button">Cancelar</button>
+                <button class="btn bg-green" type="submit">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Visualizar SQL -->
+<div class="modal fade" id="modalVisualizarSQL" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Consulta SQL</h4>
+            </div>
+            <div class="modal-body">
+                <!-- Toolbar -->
+                <div class="mb-2">
+                    <button class="btn btn-sm btn-default" onclick="copiarSql()">📋 Copiar</button>
+                </div>
+                <br>
+                <!-- Editor -->
+                <textarea id="visualizar_sql_editor"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn bg-grey" data-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="bsb/plugins/jquery/jquery.min.js"></script>
+<script src="bsb/plugins/bootstrap/js/bootstrap.js"></script>
+<script src="bsb/plugins/node-waves/waves.js"></script>
+<script src="bsb/plugins/jquery-datatable/jquery.dataTables.js"></script>
+<script src="bsb/plugins/jquery-datatable/skin/bootstrap/js/dataTables.bootstrap.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- CodeMirror -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/sql/sql.min.js"></script>
+
+<script>
+    const baseUrl = window.location.hostname !== 'localhost'
+        ? 'https://vemprodeck.com.br/dispatch-bot/api/index.php'
+        : 'http://localhost/dispatch-bot-api/index.php';
+
+    let sqlEditor;
+    let consultasMap = {}; // objeto global
+
+    function carregarConsultas() {
+        Swal.showLoading();
+        axios.post(baseUrl, {
+            method: "getConsultas",
+            data: {}
+        }).then(res => {
+            const tbody = $("#tabelaConsultas");
+            tbody.empty();
+
+
+            res.data.consultas.forEach(c => {
+                consultasMap[c.id] = c;
+                tbody.append(`
+        <tr>
+            <td>${c.nome}</td>
+            <td>${new Date(c.created_at).toLocaleString('pt-BR')}</td>
+            <td>
+                <a href="#" onclick='visualizarSql(${c.id})' title="Ver SQL">
+                    <i class="fas fa-eye blue"></i>
+                </a>
+            </td>
+        </tr>
+    `);
+            });
+
+            Swal.close();
+        }).catch(() => {
+            Swal.fire("Erro", "Não foi possível carregar as consultas", "error");
+        });
+    }
+
+    let visualizarEditor = null;
+
+    function visualizarSql(id) {
+        const consulta = consultasMap[id];
+        if (!consulta) {
+            return Swal.fire("Erro", "Consulta não encontrada.", "error");
+        }
+
+        $('#modalVisualizarSQL').modal('show');
+
+        setTimeout(() => {
+            if (visualizarEditor) {
+                visualizarEditor.setValue(consulta.sql_template);
+                visualizarEditor.refresh();
+            } else {
+                visualizarEditor = CodeMirror.fromTextArea(document.getElementById("visualizar_sql_editor"), {
+                    mode: "text/x-sql",
+                    theme: "monokai",
+                    lineNumbers: true,
+                    matchBrackets: true,
+                    indentWithTabs: true,
+                    smartIndent: true,
+                    lineWrapping: true,
+                    readOnly: true
+                });
+                visualizarEditor.setSize("100%", 500);
+                visualizarEditor.setValue(consulta.sql_template);
+            }
+        }, 300);
+    }
+
+    function copiarSql() {
+        const editor = $('#modalVisualizarSQL').hasClass('in') ? visualizarEditor : sqlEditor;
+        if (!editor) return;
+
+        const text = editor.getValue();
+        navigator.clipboard.writeText(text).then(() => {
+            Swal.fire("Copiado", "Código copiado para a área de transferência", "success");
+        });
+    }
+
+    function colarSql() {
+        navigator.clipboard.readText().then(text => {
+            if (sqlEditor) {
+                sqlEditor.setValue(text);
+                sqlEditor.focus();
+            }
+        }).catch(() => {
+            Swal.fire("Erro", "Não foi possível acessar a área de transferência", "error");
+        });
+    }
+
+
+    function abrirModalNovaConsulta() {
+        $("#nome").val('');
+        if (sqlEditor) sqlEditor.setValue('');
+        $("#modalConsulta").modal("show");
+        setTimeout(() => {
+            sqlEditor.refresh(); // Corrige bug visual ao abrir modal
+        }, 500);
+    }
+
+    $("#formConsulta").on("submit", function (e) {
+        e.preventDefault();
+
+        const nome = $("#nome").val().trim();
+        const sql_template = sqlEditor.getValue().trim();
+
+        if (!nome || !sql_template) {
+            return Swal.fire("Erro", "Preencha todos os campos", "error");
+        }
+
+        Swal.fire({ title: "Salvando...", didOpen: () => Swal.showLoading() });
+
+        axios.post(baseUrl, {
+            method: "createConsulta",
+            data: { nome,
+                    sql_template
+            }
+        }).then(res => {
+            if (res.data.success) {
+                Swal.fire("Sucesso", "Consulta salva com sucesso!", "success");
+                $("#modalConsulta").modal("hide");
+                carregarConsultas();
+            } else {
+                Swal.fire("Erro", res.data.message || "Erro ao salvar consulta", "error");
+            }
+        }).catch(() => {
+            Swal.fire("Erro", "Erro na requisição", "error");
+        });
+    });
+
+    $(document).ready(() => {
+        carregarConsultas();
+
+        sqlEditor = CodeMirror.fromTextArea(document.getElementById("sql_template"), {
+            mode: "text/x-sql",
+            theme: "monokai",
+            lineNumbers: true,
+            matchBrackets: true,
+            indentWithTabs: true,
+            smartIndent: true,
+            lineWrapping: true,
+        });
+        sqlEditor.setSize("100%", 500);
+    });
+</script>
+</body>
+</html>
