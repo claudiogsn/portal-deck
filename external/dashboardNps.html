@@ -102,54 +102,9 @@
         </table>
     </div>
 </div>
-
-<!-- MODAL RESPOSTAS -->
-<div id="modalRespostas" class="modal fade" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Pedidos do Cliente</h4>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="filtroDataInicio">Data Inicial</label>
-                        <input type="date" id="filtroDataInicio" class="form-control">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="filtroDataFim">Data Final</label>
-                        <input type="date" id="filtroDataFim" class="form-control">
-                    </div>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover" id="tabelaPedidosCliente">
-                        <thead>
-                        <tr>
-                            <th>Pedido</th>
-                            <th>Data</th>
-                            <th>Loja</th>
-                            <th>Resposta</th>
-                            <th>Ações</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- MODAL TAILWIND -->
 <div id="modalDetalhesPedido" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-lg w-[95vw] max-w-6xl max-h-[92vh] overflow-y-auto">
         <div class="flex justify-between items-center px-6 py-4 border-b">
             <h3 class="text-lg font-semibold">Resumo Completo do Pedido</h3>
             <button onclick="fecharModal()" class="text-gray-500 hover:text-gray-800">&times;</button>
@@ -793,102 +748,254 @@
             Swal.close();
 
             const respostas = resp.data.respostas || [];
+            const pedido = resp.data.pedido || {};
+            const paradas = resp.data.paradas || [];
+            const parada = paradas[0];
+            const whatsapp = resp.data.whatsapp_mensagem;
+            const nps = resp.data.mensagem_nps;
+            const itens = resp.data.itens_pedido || [];
 
-            if (!respostas.length) {
-                return Swal.fire('Erro', 'Não foi possível carregar as respostas.', 'error');
-            }
+            // -------- Helpers --------
+            const toBRL = (v) => {
+                const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+                return isNaN(n) ? (v ?? '---') : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            };
 
+            // Complementos como lista
+            const getComplementos = (item) => {
+                const partes = [];
+                for (let i = 1; i <= 12; i++) {
+                    const val = item[`parte${i}_descricao`];
+                    if (val && String(val).trim()) {
+                        partes.push(`<li class="text-sm text-gray-700">${String(val).trim()}</li>`);
+                    }
+                }
+                return partes.length
+                    ? `<ul class="mt-1 list-disc ml-5">${partes.join('')}</ul>`
+                    : '<span class="text-sm text-gray-500">---</span>';
+            };
+
+            const formatQtd = (v) => {
+                if (v == null) return '---';
+                const n = parseFloat(String(v).replace(',', '.'));
+                if (isNaN(n)) return v;
+                return Number.isInteger(n) ? n.toString() : n.toString().replace(/\.?0+$/, '');
+            };
+
+            const safe = (v) => (v ?? '---');
+
+            // HH:MM -> minutos desde 00:00
+            const hmToMin = (s) => {
+                if (!s || typeof s !== 'string') return null;
+                const [h, m] = s.split(':').map(Number);
+                if (Number.isNaN(h) || Number.isNaN(m)) return null;
+                return h * 60 + m;
+            };
+            // diferença em minutos (considera virada de dia)
+            const diffMin = (a, b) => {
+                if (a == null || b == null) return null;
+                const ONE_DAY = 24 * 60;
+                return ((b - a) % ONE_DAY + ONE_DAY) % ONE_DAY;
+            };
+            const fmtMin = (n) => (n == null ? '---' : `${n} min`);
+
+            // Timeline horizontal (Tailwind puro)
+            const buildTimeline = (it) => {
+                const h1 = safe(it.hora_lancamento);       // Chegou o Pedido
+                const h2 = safe(it.hora_at_despachado);    // Finalizou o Preparo
+                const h3 = safe(it.hr_fechamento_conta);   // Saiu para Entrega
+
+                const m1 = hmToMin(it.hora_lancamento);
+                const m2 = hmToMin(it.hora_at_despachado);
+                const m3 = hmToMin(it.hr_fechamento_conta);
+
+                const t12 = diffMin(m1, m2); // preparo
+                const t23 = diffMin(m2, m3); // espera p/ sair
+                const t13 = diffMin(m1, m3); // total
+
+                return `
+        <div class="mt-3 overflow-x-auto">
+          <div class="min-w-[720px]">
+            <div class="grid items-center gap-x-3 grid-cols-[1fr_auto_1fr_auto_1fr]">
+              <!-- Nó 1 -->
+              <div class="text-center">
+                <div class="text-xs text-gray-500 mb-1">${h1}</div>
+                <div class="inline-flex items-center">
+                  <span class="h-2 w-2 rounded-full bg-blue-600 mr-2"></span>
+                  <span class="text-sm font-medium">Chegou o Pedido</span>
+                </div>
+              </div>
+
+              <!-- Seta 1 -->
+              <div class="text-center">
+                <div class="text-xs text-gray-500 mb-1">${fmtMin(t12)}</div>
+                <div class="flex items-center justify-center">
+                  <div class="h-0.5 bg-gray-300 w-16 sm:w-24 md:w-32"></div>
+                  <svg class="mx-2 h-3 w-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 11-1.414-1.414L13.586 10 10.293 6.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                  </svg>
+                  <div class="h-0.5 bg-gray-300 w-16 sm:w-24 md:w-32"></div>
+                </div>
+              </div>
+
+              <!-- Nó 2 -->
+              <div class="text-center">
+                <div class="text-xs text-gray-500 mb-1">${h2}</div>
+                <div class="inline-flex items-center">
+                  <span class="h-2 w-2 rounded-full bg-emerald-600 mr-2"></span>
+                  <span class="text-sm font-medium">Finalizou o Preparo</span>
+                </div>
+              </div>
+
+              <!-- Seta 2 -->
+              <div class="text-center">
+                <div class="text-xs text-gray-500 mb-1">${fmtMin(t23)}</div>
+                <div class="flex items-center justify-center">
+                  <div class="h-0.5 bg-gray-300 w-16 sm:w-24 md:w-32"></div>
+                  <svg class="mx-2 h-3 w-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 11-1.414-1.414L13.586 10 10.293 6.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                  </svg>
+                  <div class="h-0.5 bg-gray-300 w-16 sm:w-24 md:w-32"></div>
+                </div>
+              </div>
+
+              <!-- Nó 3 -->
+              <div class="text-center">
+                <div class="text-xs text-gray-500 mb-1">${h3}</div>
+                <div class="inline-flex items-center">
+                  <span class="h-2 w-2 rounded-full bg-indigo-600 mr-2"></span>
+                  <span class="text-sm font-medium">Saiu para Entrega</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs italic text-gray-500 mt-2 text-center">Total: ${fmtMin(t13)}</p>
+          </div>
+        </div>
+      `;
+            };
+
+            // -------- Extra info (respostas) --------
             let lat, lng, temCoords = false;
             let extraInfoHtml = '';
 
-            const r = respostas[0];
-            lat = parseFloat(r.latitude);
-            lng = parseFloat(r.longitude);
-            temCoords = !isNaN(lat) && !isNaN(lng);
+            if (respostas.length) {
+                const r0 = respostas[0];
+                lat = parseFloat(r0.latitude);
+                lng = parseFloat(r0.longitude);
+                temCoords = !isNaN(lat) && !isNaN(lng);
 
-            extraInfoHtml = `
-            <p><strong>IP:</strong> ${r.ip || '---'}</p>
-            <p><strong>Dispositivo:</strong> ${r.tipo_dispositivo || '---'}</p>
-            <p><strong>Plataforma:</strong> ${r.plataforma || '---'}</p>
-            <p><strong>Latitude / Longitude:</strong> ${r.latitude || '---'} / ${r.longitude || '---'}</p>
-            ${temCoords ? `<div id="mapaResposta" style="width: 100%; height: 250px;" class="mt-4 rounded"></div>` : ''}
-        `;
+                extraInfoHtml = `
+        <p><strong>IP:</strong> ${safe(r0.ip)}</p>
+        <p><strong>Dispositivo:</strong> ${safe(r0.tipo_dispositivo)}</p>
+        <p><strong>Plataforma:</strong> ${safe(r0.plataforma)}</p>
+        <p><strong>Latitude / Longitude:</strong> ${safe(r0.latitude)} / ${safe(r0.longitude)}</p>
+        ${temCoords ? `<div id="mapaResposta" style="width: 100%; height: 250px;" class="mt-4 rounded"></div>` : ''}
+      `;
+            } else {
+                extraInfoHtml = `<p class="text-sm text-gray-500">Sem respostas registradas.</p>`;
+            }
 
-            const respostasHtml = respostas.map(r => `
-            <li class="text-sm text-gray-700"><strong>${r.pergunta}:</strong> ${r.resposta ?? '---'}</li>
-        `).join('');
+            const respostasHtml = respostas.length
+                ? respostas.map(r => `
+          <li class="text-sm text-gray-700"><strong>${safe(r.pergunta)}:</strong> ${r.resposta ?? '---'}</li>
+        `).join('')
+                : `<li class="text-sm text-gray-500">Nenhuma resposta encontrada.</li>`;
 
-            // Tabs padrão (respostas sempre)
-            let tabsNavHtml = `
-            <button onclick="ativarTab('tab_respostas')" class="tab-button text-blue-600 border-b-2 border-blue-600 font-medium py-2 px-4">Respostas</button>
-        `;
-            let tabsContentHtml = `
-            <div id="tab_respostas" class="tab-content block">
-                <ul class="list-disc list-inside space-y-1 mb-4">${respostasHtml}</ul>
-                ${extraInfoHtml}
+            // -------- Itens do pedido --------
+            const itensHtml = itens.length
+                ? itens.map((it) => {
+                    return `
+            <div class="rounded-md border border-gray-200 p-3 mb-3">
+              <p class="text-sm"><strong>Nome do produto:</strong> ${safe(it.nome_produto)}</p>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                <p class="text-sm"><strong>Quantidade:</strong> ${formatQtd(it.nquant)}</p>
+                <p class="text-sm"><strong>Valor produto:</strong> ${toBRL(it.valor_total_prod)}</p>
+                <p class="text-sm"><strong>Mesa:</strong> ${safe(it.mesa)}</p>
+              </div>
+
+              <p class="text-sm mt-2"><strong>Complementos:</strong></p>
+              ${getComplementos(it)}
+
+              ${buildTimeline(it)}
             </div>
-        `;
+          `;
+                }).join('')
+                : `<p class="text-sm text-gray-500">Nenhum item encontrado para este pedido.</p>`;
+
+            // -------- Tabs --------
+            let tabsNavHtml = `
+      <button onclick="ativarTab('tab_respostas')" class="tab-button text-blue-600 border-b-2 border-blue-600 font-medium py-2 px-4">Respostas</button>
+      <button onclick="ativarTab('tab_itens')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Itens</button>
+    `;
+
+            let tabsContentHtml = `
+      <div id="tab_respostas" class="tab-content block">
+        <ul class="list-disc list-inside space-y-1 mb-4">${respostasHtml}</ul>
+        ${extraInfoHtml}
+      </div>
+
+      <div id="tab_itens" class="tab-content hidden">
+        ${itensHtml}
+      </div>
+    `;
 
             if (modoVenda !== 'MESA') {
-                const p = resp.data.pedido;
-                const parada = (resp.data.paradas || [])[0];
-                const whatsapp = resp.data.whatsapp_mensagem;
-                const nps = resp.data.mensagem_nps;
-
                 tabsNavHtml += `
-                <button onclick="ativarTab('tab_pedido')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Pedido</button>
-                <button onclick="ativarTab('tab_entrega')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Entrega</button>
-                <button onclick="ativarTab('tab_disparos')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Disparos</button>
-            `;
+        <button onclick="ativarTab('tab_pedido')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Pedido</button>
+        <button onclick="ativarTab('tab_entrega')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Entrega</button>
+        <button onclick="ativarTab('tab_disparos')" class="tab-button text-gray-600 hover:text-blue-600 hover:border-blue-300 py-2 px-4">Disparos</button>
+      `;
 
                 tabsContentHtml += `
-                <div id="tab_pedido" class="tab-content hidden">
-                    <p><strong>Chave:</strong> ${p.chave_pedido}</p>
-                    <p><strong>Cliente:</strong> ${p.identificador_conta}</p>
-                    <p><strong>Data:</strong> ${p.hora_abertura} → ${p.hora_saida}</p>
-                    <p><strong>Status:</strong> ${p.status_pedido}</p>
-                    <p><strong>Modo:</strong> ${p.modo_de_conta}</p>
-                    <p><strong>Tipo Entrega:</strong> ${p.tipo_entrega}</p>
-                </div>
+        <div id="tab_pedido" class="tab-content hidden">
+          <p><strong>Chave:</strong> ${safe(pedido.chave_pedido)}</p>
+          <p><strong>Cliente:</strong> ${safe(pedido.identificador_conta)}</p>
+          <p><strong>Data:</strong> ${safe(pedido.hora_abertura)} → ${safe(pedido.hora_saida)}</p>
+          <p><strong>Status:</strong> ${safe(pedido.status_pedido)}</p>
+          <p><strong>Modo:</strong> ${safe(pedido.modo_de_conta)}</p>
+          <p><strong>Tipo Entrega:</strong> ${safe(pedido.tipo_entrega)}</p>
+        </div>
 
-                <div id="tab_entrega" class="tab-content hidden">
-                    ${parada ? `
-                        <p><strong>Endereço:</strong> ${parada.endereco}, ${parada.bairro} - ${parada.cidade}/${parada.uf}</p>
-                        <p><strong>Motoboy:</strong> ${whatsapp?.nome_taxista || '---'} - <strong>Placa:</strong> ${whatsapp?.placa_veiculo || '---'}</p>
-                        <p><strong>Link de rastreio:</strong> <a href="${parada.link_rastreio_pedido}" target="_blank" class="text-blue-600 underline">${parada.link_rastreio_pedido}</a></p>
-                    ` : '<p>Sem dados de entrega.</p>'}
-                </div>
+        <div id="tab_entrega" class="tab-content hidden">
+          ${parada ? `
+              <p><strong>Endereço:</strong> ${safe(parada.endereco)}, ${safe(parada.bairro)} - ${safe(parada.cidade)}/${safe(parada.uf)}</p>
+              <p><strong>Motoboy:</strong> ${safe(whatsapp?.nome_taxista)} - <strong>Placa:</strong> ${safe(whatsapp?.placa_veiculo)}</p>
+              <p><strong>Link de rastreio:</strong> <a href="${safe(parada.link_rastreio_pedido)}" target="_blank" class="text-blue-600 underline">${safe(parada.link_rastreio_pedido)}</a></p>
+            ` : '<p>Sem dados de entrega.</p>'}
+        </div>
 
-                <div id="tab_disparos" class="tab-content hidden">
-                    ${whatsapp ? `
-                        <p><strong>WhatsApp:</strong> ${whatsapp.telefone}</p>
-                        <p><strong>Status:</strong> ${whatsapp.message_status}</p>
-                        <p><strong>Hora Disparo:</strong> ${whatsapp.created_at || '---'}</p>
-                        <p><strong>Link de rastreio:</strong> <a href="${whatsapp.link_rastreio}" target="_blank" class="text-blue-600 underline">${whatsapp.link_rastreio}</a></p>
-                    ` : '<p>Sem disparo WhatsApp.</p>'}
+        <div id="tab_disparos" class="tab-content hidden">
+          ${whatsapp ? `
+              <p><strong>WhatsApp:</strong> ${safe(whatsapp.telefone)}</p>
+              <p><strong>Status:</strong> ${safe(whatsapp.message_status)}</p>
+              <p><strong>Hora Disparo:</strong> ${safe(whatsapp.created_at)}</p>
+              <p><strong>Link de rastreio:</strong> <a href="${safe(whatsapp.link_rastreio)}" target="_blank" class="text-blue-600 underline">${safe(whatsapp.link_rastreio)}</a></p>
+            ` : '<p>Sem disparo WhatsApp.</p>'}
 
-                    ${nps ? `
-                        <p><strong>NPS:</strong> ${nps.telefone}</p>
-                        <p><strong>Status:</strong> ${nps.message_status}</p>
-                        <p><strong>Hora Disparo:</strong> ${nps.created_at || '---'}</p>
-                        <p><strong>Link:</strong> <a href="${nps.link_nps}" target="_blank" class="text-blue-600 underline">${nps.link_nps}</a></p>
-                    ` : '<p>Sem disparo NPS.</p>'}
-                </div>
-            `;
+          ${nps ? `
+              <p><strong>NPS:</strong> ${safe(nps.telefone)}</p>
+              <p><strong>Status:</strong> ${safe(nps.message_status)}</p>
+              <p><strong>Hora Disparo:</strong> ${safe(nps.created_at)}</p>
+              <p><strong>Link:</strong> <a href="${safe(nps.link_nps)}" target="_blank" class="text-blue-600 underline">${safe(nps.link_nps)}</a></p>
+            ` : '<p>Sem disparo NPS.</p>'}
+        </div>
+      `;
             }
 
             const detalhesHtml = `
-            <div>
-                <div class="mb-4 border-b border-gray-200">
-                    <nav class="flex space-x-4" id="tabsNav">
-                        ${tabsNavHtml}
-                    </nav>
-                </div>
-                <div id="tabsContent">
-                    ${tabsContentHtml}
-                </div>
-            </div>
-        `;
+      <div>
+        <div class="mb-4 border-b border-gray-200">
+          <nav class="flex space-x-4" id="tabsNav">
+            ${tabsNavHtml}
+          </nav>
+        </div>
+        <div id="tabsContent">
+          ${tabsContentHtml}
+        </div>
+      </div>
+    `;
 
             document.getElementById("detalhesConteudo").innerHTML = detalhesHtml;
             document.getElementById("modalDetalhesPedido").classList.remove("hidden");
