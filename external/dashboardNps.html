@@ -9,6 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
 </head>
 
 <body class="bg-gray-100 text-gray-800 p-6">
@@ -92,10 +94,56 @@
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Modo Venda</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comentário</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ações</th><!-- NOVO -->
+
             </tr>
             </thead>
             <tbody id="comentariosNpsTable" class="bg-white divide-y divide-gray-200"></tbody>
         </table>
+    </div>
+</div>
+
+<!-- MODAL RESPOSTAS -->
+<div id="modalRespostas" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Pedidos do Cliente</h4>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="filtroDataInicio">Data Inicial</label>
+                        <input type="date" id="filtroDataInicio" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="filtroDataFim">Data Final</label>
+                        <input type="date" id="filtroDataFim" class="form-control">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="tabelaPedidosCliente">
+                        <thead>
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Data</th>
+                            <th>Loja</th>
+                            <th>Resposta</th>
+                            <th>Ações</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" data-dismiss="modal">Fechar</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -114,10 +162,6 @@
         </div>
     </div>
 </div>
-
-
-
-
 
 <!-- Loader -->
 <div class="bg-white p-6 rounded-lg shadow text-center" id="loader" style="display:none">
@@ -474,9 +518,8 @@
         const container = document.getElementById('comentariosNpsTable');
         container.innerHTML = '';
 
-        // Agrupamento por chave_pedido
+        // Agrupar por chave_pedido
         const agrupado = {};
-
         respostas.forEach(r => {
             if (!agrupado[r.chave_pedido]) agrupado[r.chave_pedido] = [];
             agrupado[r.chave_pedido].push(r);
@@ -486,7 +529,7 @@
             const comentario = grupo.find(r => r.metodo_resposta === 'texto');
             if (!comentario) return;
 
-            // Aplica todos os filtros ativos
+            // Filtros ativos
             if (loja && comentario.nome_loja !== loja) return;
             if (modo_venda && comentario.modo_venda !== modo_venda) return;
             if (pergunta && !grupo.some(r => r.pergunta === pergunta)) return;
@@ -494,34 +537,65 @@
             if (nota) {
                 const respostaNota = grupo.find(r => r.metodo_resposta === 'nota');
                 if (!respostaNota) return;
-
                 const n = parseInt(respostaNota.resposta);
                 if (nota === 'detrator' && (n < 0 || n > 6)) return;
-                if (nota === 'neutro' && (n < 7 || n > 8)) return;
+                if (nota === 'neutro'   && (n < 7 || n > 8)) return;
                 if (nota === 'promotor' && (n < 9 || n > 10)) return;
             }
 
+            // Tooltip seguro (escapar aspas)
             const tooltipContent = grupo
-                .map(r => `<strong>${r.pergunta}:</strong> ${r.resposta}`)
-                .join('<br>');
+                .map(r => `<strong>${r.pergunta}:</strong> ${r.resposta ?? ''}`)
+                .join('<br>')
+                .replace(/"/g, '&quot;');
 
+            // Monta objeto "pedido" para Detalhes Cliente
+            const telefoneDoGrupo = comentario.telefone || (grupo.find(x => x.telefone)?.telefone) || '';
+
+            const pedido = {
+                chave_pedido: comentario.chave_pedido,
+                telefone: telefoneDoGrupo,
+                nome_loja: comentario.nome_loja,
+                modo_venda: comentario.modo_venda,
+                created_at: comentario.created_at
+            };
+
+            // Cria a linha
             const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 cursor-pointer';
-            row.onclick = () => carregarDetalhesDoPedido(comentario.chave_pedido, comentario.modo_venda);
+            row.className = 'hover:bg-gray-50';
+
             row.innerHTML = `
-            <td class="px-4 py-2 text-sm text-gray-700">${comentario.nome_loja}</td>
-            <td class="px-4 py-2 text-sm text-gray-700">${comentario.modo_venda}</td>
-            <td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">
-                <span class="comentario-tooltip" data-tippy-content="${tooltipContent}">
-                    ${comentario.resposta}
-                </span>
-            </td>
-            <td class="px-4 py-2 text-sm text-gray-500">${new Date(comentario.created_at).toLocaleString()}</td>
-        `;
+      <td class="px-4 py-2 text-sm text-gray-700">${comentario.nome_loja}</td>
+      <td class="px-4 py-2 text-sm text-gray-700">${comentario.modo_venda}</td>
+      <td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">
+        <span class="comentario-tooltip" data-tippy-content="${tooltipContent}">
+          ${comentario.resposta}
+        </span>
+      </td>
+      <td class="px-4 py-2 text-sm text-gray-500">
+        ${new Date(comentario.created_at).toLocaleString()}
+      </td>
+      <td class="px-4 py-2 text-sm text-gray-700 whitespace-nowrap">
+        <button
+          class="btn btn-info btnVer px-2 py-1 rounded bg-sky-600 text-white hover:bg-sky-700"
+          data-pedido='${JSON.stringify(pedido)}'
+        >
+          Detalhes Cliente
+        </button>
+        <button
+          class="btn btn-primary btnVerResumo px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 ml-2"
+          data-chave="${comentario.chave_pedido}"
+          data-modovenda="${comentario.modo_venda}"
+        >
+          Detalhes do Pedido
+        </button>
+      </td>
+    `;
+
             container.appendChild(row);
         });
 
-        // Ativa tooltips
+        // Tooltips
         tippy('.comentario-tooltip', {
             allowHTML: true,
             placement: 'top',
@@ -529,6 +603,157 @@
             interactive: true,
             delay: [200, 100],
         });
+
+        // Delegação de eventos (sem jQuery)
+        // Observação: como o tbody é recriado a cada render, reanexamos o listener aqui.
+        container.onclick = (ev) => {
+            const btnVer = ev.target.closest('.btnVer');
+            if (btnVer) {
+                try {
+                    const pedido = JSON.parse(btnVer.getAttribute('data-pedido') || '{}');
+                    if (pedido && pedido.telefone) {
+                        // usa sua função existente
+                        mostrarRespostas(pedido);
+                    } else {
+                        Swal.fire('Aviso', 'Telefone do cliente não encontrado para este pedido.', 'warning');
+                    }
+                } catch (e) {
+                    Swal.fire('Erro', 'Não foi possível ler os dados do cliente.', 'error');
+                }
+                return;
+            }
+
+            const btnResumo = ev.target.closest('.btnVerResumo');
+            if (btnResumo) {
+                const chave = btnResumo.getAttribute('data-chave');
+                const modo = btnResumo.getAttribute('data-modovenda');
+                carregarDetalhesDoPedido(chave, modo);
+                return;
+            }
+        };
+    }
+
+    async function mostrarRespostas(pedido) {
+        const telefone = (pedido?.telefone || '').replace(/\D/g, '');
+
+        // ❌ NÃO use await aqui
+        Swal.fire({
+            title: 'Buscando pedidos do cliente...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const resp = await axios.post(baseUrl, {
+                method: 'ListarPedidosPorTelefone',
+                data: { telefone }
+            });
+
+            Swal.close();
+
+            const pedidos = Array.isArray(resp.data?.data) ? resp.data.data : [];
+
+            const rows = pedidos.map(p => `
+      <tr>
+        <td class="px-3 py-2 whitespace-nowrap">${p.chave_pedido ?? ''}</td>
+        <td class="px-3 py-2 whitespace-nowrap">${p.hora_abertura ?? ''}</td>
+        <td class="px-3 py-2">${p.nome_loja ?? ''}</td>
+        <td class="px-3 py-2">
+          ${p.respondeu
+                ? '<span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 text-xs">Respondeu</span>'
+                : '<span class="inline-block px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs">Sem Resposta</span>'}
+        </td>
+        <td class="px-3 py-2">
+          <button class="verDetalheBtn px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                  data-chave="${p.chave_pedido}">
+            Ver Detalhes
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+            const html = `
+      <div class="mb-3 grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-gray-700">Data Inicial</label>
+          <input id="filtroDataInicio" type="date"
+                 class="w-full border rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-200">
+        </div>
+        <div>
+          <label class="text-sm text-gray-700">Data Final</label>
+          <input id="filtroDataFim" type="date"
+                 class="w-full border rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-200">
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full border text-sm">
+          <thead class="bg-gray-100">
+            <tr class="text-left text-gray-600 uppercase text-xs">
+              <th class="px-3 py-2">Pedido</th>
+              <th class="px-3 py-2">Data</th>
+              <th class="px-3 py-2">Loja</th>
+              <th class="px-3 py-2">Resposta</th>
+              <th class="px-3 py-2">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaPedidosClienteBody">${rows}</tbody>
+        </table>
+      </div>
+    `;
+
+            // ✅ Aqui sim usamos await (é o modal final com conteúdo)
+            await Swal.fire({
+                title: 'Pedidos do cliente',
+                html,
+                width: 900,
+                showConfirmButton: false,
+                showCloseButton: true,
+                didOpen: () => {
+                    // Delegação para "Ver Detalhes"
+                    const tbody = document.getElementById('tabelaPedidosClienteBody');
+                    if (tbody) {
+                        tbody.onclick = (e) => {
+                            const btn = e.target.closest('.verDetalheBtn');
+                            if (btn) {
+                                const chave = btn.getAttribute('data-chave');
+                                if (chave) carregarDetalhesDoPedido(chave);
+                            }
+                        };
+                    }
+
+                    // Filtro por data (vanilla)
+                    const filtroIni = document.getElementById('filtroDataInicio');
+                    const filtroFim = document.getElementById('filtroDataFim');
+
+                    function aplicarFiltroDatas() {
+                        const ini = filtroIni.value ? new Date(filtroIni.value + 'T00:00') : null;
+                        const fim = filtroFim.value ? new Date(filtroFim.value + 'T23:59') : null;
+
+                        Array.from(document.querySelectorAll('#tabelaPedidosClienteBody tr')).forEach(tr => {
+                            const txtData = tr.children[1]?.textContent?.trim() || '';
+                            const soData = txtData.split(' ')[0] || '';          // "dd/mm/aaaa"
+                            const [dd, mm, yyyy] = soData.split('/');
+                            const parsed = (dd && mm && yyyy) ? new Date(`${yyyy}-${mm}-${dd}T00:00`) : null;
+
+                            const visivel =
+                                (!ini || (parsed && parsed >= ini)) &&
+                                (!fim || (parsed && parsed <= fim));
+
+                            tr.style.display = visivel ? '' : 'none';
+                        });
+                    }
+
+                    if (filtroIni) filtroIni.onchange = aplicarFiltroDatas;
+                    if (filtroFim) filtroFim.onchange = aplicarFiltroDatas;
+                }
+            });
+
+        } catch (err) {
+            Swal.close();
+            Swal.fire('Erro', 'Falha ao buscar pedidos.', 'error');
+            console.error(err);
+        }
     }
 
 
